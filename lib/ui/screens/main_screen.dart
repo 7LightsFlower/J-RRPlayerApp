@@ -4,11 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
-import 'package:jrrplayerapp/ui/screens/podcast_list_screen.dart';
 import 'package:jrrplayerapp/widgets/audio_player_widget.dart';
 import 'package:jrrplayerapp/constants/strings.dart';
-import 'package:jrrplayerapp/ui/screens/articles_feed_screen.dart';
-import 'package:jrrplayerapp/ui/screens/news_feed_screen.dart';
 import 'package:jrrplayerapp/widgets/radio_button_with_waves.dart';
 import 'package:jrrplayerapp/ui/screens/enlarged_tabs_screen.dart';
 
@@ -19,8 +16,7 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _MainScreenState extends State<MainScreen> {
   bool _isInitialized = false;
 
   Future<void> _launchURL(String url) async {
@@ -66,7 +62,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     );
   }
 
-  // Верхняя часть (радио + плеер) – теперь прижата к верху
+  // Top part (radio + player) – unchanged
   Widget _buildTopPart({required double availableWidth, required double availableHeight}) {
     return SizedBox(
       height: availableHeight * 0.6,
@@ -83,60 +79,48 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     );
   }
 
-  Widget _buildBottomPart() {
-    return Stack(
+  // Build three icon buttons for Articles, News, Podcasts
+  Widget _buildNavigationIcons({double iconSize = 36}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        Column(
-          children: [
-            TabBar(
-              controller: _tabController,
-              padding: EdgeInsets.zero,
-              tabAlignment: TabAlignment.fill,
-              labelPadding: const EdgeInsets.symmetric(horizontal: 2.0),
-              labelColor: AppColors.customWhite,
-              unselectedLabelColor: AppColors.customGrey,
-              indicatorColor: AppColors.customGreen,
-              tabs: const [
-                Tab(text: AppStrings.articlesTab),
-                Tab(text: AppStrings.newsTab),
-                Tab(text: AppStrings.podcastsTab),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: const [
-                  ArticlesFeedScreen(),
-                  NewsFeedScreen(),
-                  PodcastListScreen(),
-                ],
+        _navIcon(Icons.article, AppStrings.articlesTab, 0, iconSize),
+        _navIcon(Icons.newspaper, AppStrings.newsTab, 1, iconSize),
+        _navIcon(Icons.podcasts, AppStrings.podcastsTab, 2, iconSize),
+      ],
+    );
+  }
+
+  Widget _navIcon(IconData icon, String label, int index, double size) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          icon: Icon(icon, color: AppColors.customWhite, size: size),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => EnlargedTabsScreen(initialIndex: index),
               ),
+            );
+          },
+          style: IconButton.styleFrom(
+            backgroundColor: AppColors.customTransp,
+            padding: const EdgeInsets.all(12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+              side: const BorderSide(color: AppColors.customWhite, width: 1),
             ),
-          ],
+          ),
         ),
-        Positioned(
-          bottom: 12,
-          left: 0,
-          right: 0,
-          child: ElevatedButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => EnlargedTabsScreen(
-                    initialIndex: _tabController.index, // ← передаём текущий индекс
-                  ),
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.customTransp,
-              elevation: 0,
-              foregroundColor: AppColors.customWhite,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-            ),
-            child: const Text(AppStrings.enlargeTabsButton),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            color: AppColors.customWhite,
+            fontSize: 12,
+            fontWeight: FontWeight.w400,
           ),
         ),
       ],
@@ -147,7 +131,6 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   void initState() {
     super.initState();
     _initializeAsync();
-    _tabController = TabController(length: 3, vsync: this);
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       systemNavigationBarColor: AppColors.customTransp,
       systemNavigationBarIconBrightness: Brightness.light,
@@ -181,20 +164,6 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
               title: const Text(AppStrings.appName),
               backgroundColor: AppColors.customWhite,
               foregroundColor: AppColors.customBackgr,
-              bottom: PreferredSize(
-                preferredSize: const Size.fromHeight(kTextTabBarHeight),
-                child: TabBar(
-                  controller: _tabController,
-                  padding: EdgeInsets.zero,
-                  tabAlignment: TabAlignment.fill,
-                  labelPadding: const EdgeInsets.symmetric(horizontal: 2.0),
-                  tabs: const [
-                    Tab(text: AppStrings.articlesTab),
-                    Tab(text: AppStrings.newsTab),
-                    Tab(text: AppStrings.podcastsTab),
-                  ],
-                ),
-              ),
             )
           : null,
       body: SafeArea(
@@ -205,54 +174,19 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                 builder: (context, constraints) {
                   final double availableWidth = constraints.maxWidth;
                   final double buttonSize = availableWidth * 0.08;
-                  return Stack(
+                  return Column(
                     children: [
-                      Column(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                            child: _buildSocialButtons(buttonSize),
-                          ),
-                          _buildTopPart(
-                            availableWidth: availableWidth,
-                            availableHeight: constraints.maxHeight,
-                          ),
-                          Expanded(
-                            child: TabBarView(
-                              controller: _tabController,
-                              children: const [
-                                ArticlesFeedScreen(),
-                                NewsFeedScreen(),
-                                PodcastListScreen(),
-                              ],
-                            ),
-                          ),
-                        ],
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        child: _buildSocialButtons(buttonSize),
                       ),
-                      Positioned(
-                        bottom: 12,
-                        left: 0,
-                        right: 0,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => EnlargedTabsScreen(
-                                  initialIndex: _tabController.index, // ← передаём индекс
-                                ),
-                              ),
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.customTransp,
-                            elevation: 0,
-                            foregroundColor: AppColors.customWhite,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                          ),
-                          child: const Text(AppStrings.enlargeTabsButton),
-                        ),
+                      _buildTopPart(
+                        availableWidth: availableWidth,
+                        availableHeight: constraints.maxHeight,
                       ),
+                      const SizedBox(height: 8),
+                      _buildNavigationIcons(iconSize: 36),
+                      const Spacer(),
                     ],
                   );
                 },
@@ -288,12 +222,15 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                               child: SizedBox(
                                 height: availableHeight,
                                 child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Padding(
                                       padding: const EdgeInsets.only(top: 8),
                                       child: _buildSocialButtons(buttonSize),
                                     ),
-                                    Expanded(child: _buildBottomPart()),
+                                    const Spacer(),
+                                    _buildNavigationIcons(iconSize: 40),
+                                    const Spacer(),
                                   ],
                                 ),
                               ),
@@ -319,7 +256,9 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                               availableWidth: availableWidth,
                               availableHeight: availableHeight,
                             ),
-                            Expanded(child: _buildBottomPart()),
+                            const SizedBox(height: 8),
+                            _buildNavigationIcons(iconSize: 36),
+                            const Spacer(),
                           ],
                         );
                       },
@@ -329,11 +268,5 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
               ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
   }
 }
