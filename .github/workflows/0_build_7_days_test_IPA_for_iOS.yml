@@ -122,6 +122,13 @@ jobs:
             sleep 10
           done
 
+      - name: Disable SwiftPM in pubspec.yaml
+        run: |
+          echo '' >> pubspec.yaml
+          echo 'flutter:' >> pubspec.yaml
+          echo '  config:' >> pubspec.yaml
+          echo '    enable-swift-package-manager: false' >> pubspec.yaml
+
       # --- Build ---
       - name: Build iOS (unsigned)
         env:
