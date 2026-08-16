@@ -15,6 +15,10 @@ jobs:
           channel: 'stable'
           architecture: x64
 
+      # --- ОТКЛЮЧАЕМ SWIFTPM ГЛОБАЛЬНО ---
+      - name: Disable Swift Package Manager globally
+        run: flutter config --no-enable-swift-package-manager
+
       - run: flutter clean
       - run: flutter pub get
 
@@ -121,13 +125,6 @@ jobs:
             echo "Retry in 10s..."
             sleep 10
           done
-
-      - name: Disable SwiftPM in pubspec.yaml
-        run: |
-          echo '' >> pubspec.yaml
-          echo 'flutter:' >> pubspec.yaml
-          echo '  config:' >> pubspec.yaml
-          echo '    enable-swift-package-manager: false' >> pubspec.yaml
 
       # --- Build ---
       - name: Build iOS (unsigned)
