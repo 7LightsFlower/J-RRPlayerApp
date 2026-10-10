@@ -30,8 +30,10 @@ class AppStrings {
     'https://api.allorigins.win/raw?url=',
     'https://corsproxy.io/?',
     'https://api.codetabs.com/v1/proxy?quest=',
+    'https://proxy.cors.sh/', 
     'https://cors-anywhere.herokuapp.com/'
   ];
+
   // Deezer API mit mehreren Proxy-Optionen
   static List<String> getDeezerApiUrls(String query) {
     final originalUrl = 'https://api.deezer.com/search?q=$query&limit=1';
