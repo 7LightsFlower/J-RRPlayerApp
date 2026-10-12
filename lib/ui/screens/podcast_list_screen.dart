@@ -277,8 +277,11 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
   // Загрузка кеша
   // ----------------------------------------------------------------------
   Future<void> _loadCachedData() async {
+<<<<<<< HEAD
     final podcastRepo = Provider.of<PodcastRepository>(context, listen: false);
 
+=======
+>>>>>>> 51dab36dbd97f28bc6888f95ace11df0b8a89728
     try {
       final prefs = await SharedPreferences.getInstance();
       final cachedData = prefs.getString(_rssCacheKey);
@@ -292,6 +295,7 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
               .timeout(const Duration(seconds: 3), onTimeout: () => []);
         }
         if (cachedPodcasts.isNotEmpty && mounted) {
+<<<<<<< HEAD
           podcastRepo.setEpisodes(cachedPodcasts);
           cachedPodcasts.sort((a, b) => b.publishedDate.compareTo(a.publishedDate));
           setState(() {
@@ -394,10 +398,136 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
     } finally {
       _isDownloading = false;
       _stopStatusUpdates();
+=======
+          final podcastRepo = Provider.of<PodcastRepository>(context, listen: false);
+          podcastRepo.setEpisodes(cachedPodcasts);
+          cachedPodcasts.sort((a, b) => b.publishedDate.compareTo(a.publishedDate));
+          setState(() {
+            podcasts = cachedPodcasts.take(pageSize).toList();
+            isLoading = false;
+            hasMore = cachedPodcasts.length > pageSize;
+            errorMessage = '';
+          });
+          debugPrint('📂 Загружено ${podcasts.length} эпизодов из кеша');
+          return;
+        }
+      }
+      if (mounted) {
+        setState(() {
+          isLoading = true;
+          errorMessage = '';
+        });
+        debugPrint('📂 Кеш не найден, ожидаем загрузки из сети');
+      }
+    } catch (e) {
+      debugPrint('Cache load error: $e');
+      if (mounted) {
+        setState(() {
+          isLoading = true;
+          errorMessage = '';
+        });
+      }
     }
   }
 
   // ----------------------------------------------------------------------
+  // Фоновое обновление (используем AppStrings.getWithProxy)
+  // ----------------------------------------------------------------------
+  Future<void> _fetchFreshData() async {
+    if (!mounted) return;
+    if (_connectionType == ConnectionType.offline) return;
+
+    // Получаем репозиторий синхронно (до всех await)
+    final podcastRepo = Provider.of<PodcastRepository>(context, listen: false);
+
+    try {
+      _isDownloading = true;
+      _startStatusUpdates();
+
+      // Пробуем загрузить полный RSS через универсальный метод с прокси
+      final response = await AppStrings.getWithProxy(AppStrings.podcastRssOriginalUrl);
+      final responseBody = response.body;
+      debugPrint('📡 RSS получен, длина: ${responseBody.length}');
+
+      // Парсим
+      List<PodcastEpisode> freshPodcasts;
+      if (kIsWeb) {
+        freshPodcasts = _parseRssFull(responseBody);
+      } else {
+        freshPodcasts = await compute(_parseRssFull, responseBody)
+            .timeout(const Duration(seconds: 10), onTimeout: () => []);
+      }
+
+      // Проверяем, что виджет ещё существует
+      if (!mounted) return;
+
+      if (freshPodcasts.isNotEmpty) {
+        // Сохраняем в кеш
+        await _saveToCache(responseBody);
+
+        podcastRepo.setEpisodes(freshPodcasts);
+        freshPodcasts.sort((a, b) => b.publishedDate.compareTo(a.publishedDate));
+
+        setState(() {
+          podcasts = freshPodcasts.take(pageSize).toList();
+          hasMore = freshPodcasts.length > pageSize;
+          errorMessage = '';
+          if (isLoading) isLoading = false;
+        });
+        debugPrint('✅ Загружено ${freshPodcasts.length} эпизодов из сети');
+      } else {
+        // Парсинг вернул пустой список – используем кеш, если есть
+        if (podcasts.isEmpty) {
+          // Если кеша не было, показываем ошибку
+          setState(() {
+            errorMessage = 'Не удалось загрузить подкасты (пустой ответ)';
+            isLoading = false;
+          });
+        } else {
+          // Показываем кеш
+          setState(() {
+            errorMessage = 'Обновление не удалось, показаны кешированные данные';
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Fetch fresh data error: $e');
+      if (mounted) {
+        if (podcasts.isEmpty) {
+          setState(() {
+            errorMessage = 'Ошибка загрузки: ${e.toString()}';
+            isLoading = false;
+          });
+        } else {
+          // Есть кеш – просто показываем уведомление
+          setState(() {
+            errorMessage = 'Не удалось обновить, показан кеш';
+          });
+        }
+      }
+    } finally {
+      _isDownloading = false;
+      _stopStatusUpdates();
+    }
+  }
+
+  // ----------------------------------------------------------------------
+  // Ручное обновление (pull-to-refresh)
+  // ----------------------------------------------------------------------
+  Future<void> _refreshPodcasts() async {
+    if (!mounted) return;
+    if (_connectionType == ConnectionType.offline) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Нет подключения к интернету')),
+      );
+      return;
+>>>>>>> 51dab36dbd97f28bc6888f95ace11df0b8a89728
+    }
+    await _fetchFreshData();
+  }
+
+  // ----------------------------------------------------------------------
+<<<<<<< HEAD
   // Ручное обновление (pull-to-refresh)
   // ----------------------------------------------------------------------
   Future<void> _refreshPodcasts() async {
@@ -412,6 +542,8 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
   }
 
   // ----------------------------------------------------------------------
+=======
+>>>>>>> 51dab36dbd97f28bc6888f95ace11df0b8a89728
   // Кэш (сохранение)
   // ----------------------------------------------------------------------
   Future<void> _saveToCache(String rssData) async {
