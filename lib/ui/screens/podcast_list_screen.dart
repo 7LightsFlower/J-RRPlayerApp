@@ -277,6 +277,8 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
   // Загрузка кеша
   // ----------------------------------------------------------------------
   Future<void> _loadCachedData() async {
+    final podcastRepo = Provider.of<PodcastRepository>(context, listen: false);
+
     try {
       final prefs = await SharedPreferences.getInstance();
       final cachedData = prefs.getString(_rssCacheKey);
@@ -290,7 +292,6 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
               .timeout(const Duration(seconds: 3), onTimeout: () => []);
         }
         if (cachedPodcasts.isNotEmpty && mounted) {
-          final podcastRepo = Provider.of<PodcastRepository>(context, listen: false);
           podcastRepo.setEpisodes(cachedPodcasts);
           cachedPodcasts.sort((a, b) => b.publishedDate.compareTo(a.publishedDate));
           setState(() {
@@ -328,6 +329,8 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
     if (!mounted) return;
     if (_connectionType == ConnectionType.offline) return;
 
+    final podcastRepo = Provider.of<PodcastRepository>(context, listen: false);
+
     try {
       _isDownloading = true;
       _startStatusUpdates();
@@ -350,7 +353,6 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
         // Сохраняем в кеш
         await _saveToCache(responseBody);
 
-        final podcastRepo = Provider.of<PodcastRepository>(context, listen: false);
         podcastRepo.setEpisodes(freshPodcasts);
         freshPodcasts.sort((a, b) => b.publishedDate.compareTo(a.publishedDate));
 

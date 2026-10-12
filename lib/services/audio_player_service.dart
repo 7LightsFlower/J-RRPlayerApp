@@ -1211,6 +1211,29 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
     }
   }
 
+  /// Unified toggle for the logo button in RadioButtonWithWaves.
+  /// Works correctly whether we're currently in radio or podcast mode.
+  Future<void> toggleRadioOrPodcast() async {
+    debugPrint('🎵 toggleRadioOrPodcast called');
+    debugPrint('🎵   isPodcastMode: $_isPodcastMode');
+    debugPrint('🎵   currentEpisode: ${_currentEpisode?.title}');
+    debugPrint('🎵   isPlaying: $isPlaying');
+    debugPrint('🎵   isRadioPlaying: $isRadioPlaying');
+    debugPrint('🎵   isRadioPaused: $isRadioPaused');
+    debugPrint('🎵   isRadioStopped: $isRadioStopped');
+
+    // Podcast mode: toggle the podcast playback
+    if (_isPodcastMode && _currentEpisode != null) {
+      debugPrint('🎵 Podcast mode -> togglePodcastPlayback');
+      await togglePodcastPlayback(_currentEpisode!);
+      return;
+    }
+
+    // Radio mode: toggle radio playback
+    debugPrint('🎵 Radio mode -> toggleRadio');
+    await toggleRadio();
+  }
+
   Future<void> playPodcastFromPosition(PodcastEpisode episode, Duration position) async {
     debugPrint('playPodcastFromPosition called: ${episode.title} at ${position.inSeconds}s');
 

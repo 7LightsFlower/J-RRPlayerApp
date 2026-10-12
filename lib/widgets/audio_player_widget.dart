@@ -4,11 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
 import 'package:jrrplayerapp/services/audio_player_service.dart';
-import 'package:just_audio/just_audio.dart';
 import 'package:provider/provider.dart';
 
 /// A tiny wrapper that turns a [Stream<T>] into a [ValueListenable<T>].
-/// It listens to the stream and notifies listeners on every emission.
 class _StreamValueNotifier<T> extends ValueNotifier<T> {
   final Stream<T> _stream;
   late final StreamSubscription<T> _subscription;
@@ -39,7 +37,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   late final ValueNotifier<AudioMetadata?> _metadataNotifier;
   late final ValueNotifier<int> _imageUpdateNotifier;
   late final ValueNotifier<double> _volumeNotifier;
-  final bool _isToggling = false;
+  bool _isToggling = false;
 
   @override
   void initState() {
@@ -47,13 +45,11 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
 
     _audioService = Provider.of<AudioPlayerService>(context, listen: false);
 
-    // Запускаем периодическую проверку состояния
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAndSyncState();
       _printRadioState();
     });
-  
-    // Подписываемся на поток состояний
+
     _audioService.playbackStateStream.listen((isPlaying) {
       if (mounted) {
         setState(() {
@@ -62,14 +58,6 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
       }
     });
 
-    debugPrint('🎵 AudioPlayerWidget initState');
-    debugPrint('🎵 Initial metadata - Title: "${_audioService.currentMetadata?.title}", Artist: "${_audioService.currentMetadata?.artist}"');
-    debugPrint('🎵 Current episode: ${_audioService.currentEpisode?.title}');
-    debugPrint('🎵 Is podcast mode: ${_audioService.isPodcastMode}');
-    debugPrint('🎵 AudioHandler available: ${_audioService.audioHandler != null}');
-    debugPrint('🎵 Initial playing state: ${_audioService.isPlaying}');
-
-    // Восстанавливаем состояние из сервиса при инициализации
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _syncPlayerState();
@@ -78,10 +66,8 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
 
     _initializeNotifiers();
     _setupDurationSync();
-
-    // Подписываемся на изменения состояния плеера напрямую
     _setupPlayerStateListener();
-    // Запускаем периодическую синхронизацию каждую секунду
+
     Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) {
         timer.cancel();
@@ -91,7 +77,6 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     });
   }
 
-  // Добавьте этот метод в класс _AudioPlayerWidgetState
   void _printRadioState() {
     if (!_audioService.isPodcastMode) {
       final player = _audioService.getPlayer();
@@ -109,15 +94,13 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   void _setupPlayerStateListener() {
     final player = _audioService.getPlayer();
     if (player != null) {
-      // Слушаем изменения состояния playing напрямую из плеера
+      // reserved for direct player listeners
     }
   }
 
   void _initializeNotifiers() {
     final player = _audioService.getPlayer();
-    debugPrint('🎵 Player state: playing=${player?.playing}, position=${player?.position}');
 
-    // Используем текущее состояние из сервиса как источник истины
     _playingNotifier = ValueNotifier<bool>(_audioService.isPlaying);
 
     _positionNotifier = _StreamValueNotifier<Duration?>(
@@ -142,7 +125,6 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   }
 
   void _setupDurationSync() {
-    // Синхронизируем длительность из плеера с моделью подкаста
     _durationNotifier.addListener(() {
       final duration = _durationNotifier.value;
       if (duration != null && duration > Duration.zero) {
@@ -154,39 +136,19 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   void _onAudioServiceUpdate() {
     if (!mounted) return;
 
-    debugPrint('🎵 AudioService update received - isPlaying: ${_audioService.isPlaying}, '
-              'isRadioPlaying: ${_audioService.isRadioPlaying}, '
-              'isRadioPaused: ${_audioService.isRadioPaused}, '
-              'isRadioStopped: ${_audioService.isRadioStopped}');
-
-    // КРИТИЧЕСКОЕ ИЗМЕНЕНИЕ: Всегда обновляем notifier, даже если значение кажется тем же
-    // Это решает проблему, когда UI не обновляется из-за того что значение в notifier
-    // уже было false, но UI все равно нужно перерисовать
     final currentPlayingState = _audioService.isPlaying;
-    if (_playingNotifier.value != currentPlayingState) {
-      _playingNotifier.value = currentPlayingState;
-      debugPrint('🎵 Sync: Updated _playingNotifier to $currentPlayingState');
-    } else {
-      // Даже если значение не изменилось, принудительно триггерим обновление
-      _playingNotifier.value = currentPlayingState;
-      debugPrint('🎵 Sync: Force updated _playingNotifier (same value: $currentPlayingState)');
-    }
+    _playingNotifier.value = currentPlayingState;
 
-    // Принудительная синхронизация состояния плеера
     _syncPlayerState();
 
-    // Обновляем метаданные
     final newMetadata = _audioService.currentMetadata;
     if (_metadataNotifier.value != newMetadata) {
       _metadataNotifier.value = newMetadata;
       _imageUpdateNotifier.value++;
     }
 
-    // КРИТИЧЕСКОЕ ИЗМЕНЕНИЕ: Всегда вызываем setState, даже если данные не изменились
-    // Это гарантирует обновление UI при командах из фонового режима
     if (mounted) {
       setState(() {
-        // Принудительное обновление состояния кнопки
         _playingNotifier.value = _audioService.isPlaying;
       });
     }
@@ -194,79 +156,84 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
 
   Future<void> _checkAndSyncState() async {
     if (!mounted) return;
-    
+
     final player = _audioService.getPlayer();
     final isActuallyPlaying = player?.playing ?? false;
     final serviceSaysPlaying = _audioService.isPlaying;
-    
-    debugPrint('🎵 State check: player.playing=$isActuallyPlaying, service.isPlaying=$serviceSaysPlaying');
-    
-    // Если есть расхождение, синхронизируем
+
     if (isActuallyPlaying != serviceSaysPlaying) {
-      debugPrint('🎵 State mismatch! Syncing...');
       _playingNotifier.value = isActuallyPlaying;
-      
-      if (mounted) {
-        setState(() {});
-      }
+      if (mounted) setState(() {});
     }
-    
-    // Периодическая проверка
+
     Future.delayed(const Duration(seconds: 2), _checkAndSyncState);
   }
 
   Future<void> _togglePlayPause() async {
-    debugPrint('🎵 Toggle play/pause called');
-    
+    // Guard: ignore taps while a toggle is already in progress
+    if (_isToggling) {
+      debugPrint('🎵 Toggle ignored: already toggling');
+      return;
+    }
+
+    setState(() {
+      _isToggling = true;
+    });
+
     try {
       final isCurrentlyPlaying = _audioService.isPlaying;
-      
+
       if (isCurrentlyPlaying) {
-        // ✅ УНИФИЦИРОВАННО: всегда вызываем pause() сервиса
         debugPrint('🎵 Switching to PAUSE');
-        await _audioService.pause();
+        // Fire-and-forget — don't await the whole stream teardown.
+        // _syncPlayerState() will pick up the new state within 1s.
+        unawaited(_audioService.pause());
       } else {
         debugPrint('🎵 Switching to PLAY');
-        
-        if (_audioService.isPodcastMode && _audioService.currentEpisode != null) {
-          // Подкаст: воспроизведение через сервис
-          await _audioService.playPodcast(_audioService.currentEpisode!);
+
+        if (_audioService.isPodcastMode &&
+            _audioService.currentEpisode != null) {
+          unawaited(_audioService.playPodcast(_audioService.currentEpisode!));
         } else {
-          // ✅ ИСПРАВЛЕНИЕ: Улучшенная логика для радио
-          final player = _audioService.getPlayer();
+          _audioService.getPlayer();
           final isRadioPaused = _audioService.isRadioPaused;
           final isRadioStopped = _audioService.isRadioStopped;
-          
+
           debugPrint('🎵 Radio state: paused=$isRadioPaused, stopped=$isRadioStopped');
-          
+
           if (isRadioPaused) {
-            debugPrint('🎵 Radio is paused - resuming from pause');
-            await _audioService.resumeRadioFromPause();
-          } else if (isRadioStopped || player?.processingState == ProcessingState.idle) {
-            debugPrint('🎵 Radio is stopped - starting fresh');
-            await _audioService.playRadio();
+            unawaited(_audioService.resumeRadioFromPause());
           } else {
-            debugPrint('🎵 Radio in unknown state - attempting to play');
-            await _audioService.playRadio();
+            // Both "stopped" and "unknown" → start fresh
+            unawaited(_audioService.playRadio());
           }
         }
       }
-      
-      // Немедленная синхронизация
-      _syncPlayerState();
-      
+
+      // Optimistically update the button icon right away so the UI
+      // doesn't wait 1s for _syncPlayerState().
+      if (mounted) {
+        setState(() {
+          _playingNotifier.value = !isCurrentlyPlaying;
+        });
+      }
     } catch (e) {
       debugPrint('🎵 Error in toggle play/pause: $e');
       _showErrorSnackBar('Error: $e');
+    } finally {
+      // ✅ CRITICAL: always release the guard, even if something threw.
+      if (mounted) {
+        setState(() {
+          _isToggling = false;
+        });
+      } else {
+        _isToggling = false;
+      }
     }
   }
 
-  // Метод для безопасного показа SnackBar
   void _showErrorSnackBar(String message) {
-    // Используем WidgetsBinding для безопасного доступа к контексту
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Находим Scaffold через глобальный ключ или через Navigator
-      final context = this.context;
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -285,26 +252,13 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
       final position = player.position;
       final duration = player.duration;
 
-      debugPrint('🎵 Syncing player state:');
-      debugPrint('🎵   Playing: $isPlaying (from player)');
-      debugPrint('🎵   Service.isPlaying: ${_audioService.isPlaying}');
-      debugPrint('🎵   Mode: ${_audioService.isPodcastMode ? 'podcast' : 'radio'}');
-      debugPrint('🎵   isRadioPlaying: ${_audioService.isRadioPlaying}');
-      debugPrint('🎵   isRadioPaused: ${_audioService.isRadioPaused}');
-      debugPrint('🎵   isRadioStopped: ${_audioService.isRadioStopped}');
-      
-      // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Проверяем все возможные состояния радио
       bool actualPlayingState = isPlaying;
-      
       if (!_audioService.isPodcastMode) {
-        // Для радио используем логику из сервиса
         actualPlayingState = _audioService.isRadioPlaying;
       }
-      
-      // ВАЖНО: обновляем notifier даже если значение не изменилось
-      // чтобы гарантировать обновление UI
+
       _playingNotifier.value = actualPlayingState;
-      
+
       if (_positionNotifier.value != position) {
         _positionNotifier.value = position;
       }
@@ -313,7 +267,6 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
         _durationNotifier.value = duration;
       }
 
-      // Обновляем метаданные
       final newMetadata = _audioService.currentMetadata;
       if (_metadataNotifier.value != newMetadata) {
         _metadataNotifier.value = newMetadata;
@@ -354,13 +307,19 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
-    final maxPlayerHeight = screenHeight * 0.5;
+    final maxPlayerHeight = screenHeight * 0.6;
     final bool isCompact = maxPlayerHeight < 400;
-    final double coverSize = isCompact ? 48.0 : 64.0;
-    final double iconSize = isCompact ? 40.0 : 50.0;
-    final double smallSpacing = isCompact ? 2.0 : 6.0;
-    final double mediumSpacing = isCompact ? 8.0 : 12.0;
-    final double largeSpacing = isCompact ? 12.0 : 16.0;
+
+    // Bigger play/pause button
+    final double playButtonSize = isCompact ? 68.0 : 84.0;
+    final double skipIconSize = isCompact ? 32.0 : 38.0;
+
+    // Album cover sized generously for the left-side layout
+    final double coverSize = isCompact ? 72.0 : 88.0;
+
+    final double smallSpacing = isCompact ? 4.0 : 8.0;
+    final double mediumSpacing = isCompact ? 10.0 : 16.0;
+    final double largeSpacing = isCompact ? 14.0 : 20.0;
 
     return ConstrainedBox(
       constraints: BoxConstraints(maxHeight: maxPlayerHeight),
@@ -368,58 +327,205 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Кнопки управления
+            // ==================== PLAYBACK CONTROLS ====================
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.skip_previous, size: 30),
-                  onPressed: _audioService.isPodcastMode
-                      ? _playPreviousPodcast
-                      : null,
-                  color: _audioService.isPodcastMode ? AppColors.customWhite : AppColors.customGrey,
+                  icon: Icon(Icons.skip_previous, size: skipIconSize),
+                  onPressed:
+                      _audioService.isPodcastMode ? _playPreviousPodcast : null,
+                  color: _audioService.isPodcastMode
+                      ? AppColors.customWhite
+                      : AppColors.customGrey,
                 ),
-                SizedBox(width: smallSpacing),
+                SizedBox(width: mediumSpacing),
 
+                // ===== LARGER PLAY / PAUSE BUTTON =====
                 ValueListenableBuilder<bool>(
                   valueListenable: _playingNotifier,
                   builder: (context, playing, __) {
-                    return IconButton(
-                      icon: Icon(
-                        playing ? Icons.pause_circle_filled : Icons.play_circle_filled,
-                        size: iconSize,
+                    return Container(
+                      width: playButtonSize,
+                      height: playButtonSize,
+                      decoration: BoxDecoration(
+                        color: _isToggling
+                            ? AppColors.customStyle.withValues(alpha: 0.6)
+                            : AppColors.customStyle,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.customStyle.withValues(alpha: 0.35),
+                            blurRadius: 20,
+                            spreadRadius: 2,
+                          ),
+                        ],
                       ),
-                      onPressed: () async {
-                        debugPrint('🎵 Button pressed, _isToggling: $_isToggling');
-                        await _togglePlayPause();
-                      },
-                      color: AppColors.customWhite,
+                      child: IconButton(
+                        icon: _isToggling
+                            ? SizedBox(
+                                width: playButtonSize * 0.4,
+                                height: playButtonSize * 0.4,
+                                child: const CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : Icon(
+                                playing ? Icons.pause : Icons.play_arrow,
+                                size: playButtonSize * 0.5,
+                              ),
+                        onPressed: _isToggling
+                            ? null
+                            : () async {
+                                await _togglePlayPause();
+                              },
+                        color: AppColors.customBackgr,
+                        padding: EdgeInsets.zero,
+                      ),
                     );
                   },
                 ),
-                SizedBox(width: smallSpacing),
+                SizedBox(width: mediumSpacing),
 
                 IconButton(
-                  icon: const Icon(Icons.skip_next, size: 30),
-                  onPressed: _audioService.isPodcastMode
-                      ? _playNextPodcast
-                      : null,
-                  color: _audioService.isPodcastMode ? AppColors.customWhite : AppColors.customGrey,
+                  icon: Icon(Icons.skip_next, size: skipIconSize),
+                  onPressed:
+                      _audioService.isPodcastMode ? _playNextPodcast : null,
+                  color: _audioService.isPodcastMode
+                      ? AppColors.customWhite
+                      : AppColors.customGrey,
                 ),
               ],
             ),
-            SizedBox(height: smallSpacing),
+            SizedBox(height: largeSpacing),
 
-            // Регулятор громкости
+            // ==================== ALBUM COVER + TRACK INFO (CENTERED BLOCK) ====================
+            Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: largeSpacing),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,   // ⬅ ключевое: Row сжимается по контенту
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // ---- ALBUM COVER ----
+                    ValueListenableBuilder<int>(
+                      valueListenable: _imageUpdateNotifier,
+                      builder: (_, imageVersion, __) {
+                        return ValueListenableBuilder<AudioMetadata?>(
+                          valueListenable: _metadataNotifier,
+                          builder: (_, metadata, __) {
+                            return Container(
+                              width: coverSize,
+                              height: coverSize,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(10),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: AppColors.customTransp,
+                                    blurRadius: 6,
+                                    offset: Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: _buildCoverImage(metadata, imageVersion),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                    SizedBox(width: mediumSpacing),
+
+                    // ---- TRACK INFO ----
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        // Ограничиваем ширину блока с текстом, чтобы он не растягивался бесконечно
+                        // и не ломал центрирование
+                        maxWidth: MediaQuery.of(context).size.width * 0.55,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // "СЕЙЧАС В ЭФИРЕ"
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.bar_chart,
+                                color: AppColors.customStyle,
+                                size: 16,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'СЕЙЧАС В ЭФИРЕ',
+                                style: TextStyle(
+                                  color: AppColors.customStyle.withValues(alpha: 0.85),
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 1,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+
+                          // Track title
+                          ValueListenableBuilder<AudioMetadata?>(
+                            valueListenable: _metadataNotifier,
+                            builder: (_, metadata, __) {
+                              final title = metadata?.title ?? 'Радио J-Rock';
+                              return Text(
+                                title,
+                                style: TextStyle(
+                                  fontSize: isCompact ? 16 : 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.customWhite,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 4),
+
+                          // Artist
+                          ValueListenableBuilder<AudioMetadata?>(
+                            valueListenable: _metadataNotifier,
+                            builder: (_, metadata, __) {
+                              return Text(
+                                metadata?.artist ?? 'Онлайн радио',
+                                style: TextStyle(
+                                  fontSize: isCompact ? 13 : 14,
+                                  color: AppColors.customWhite.withValues(alpha: 0.6),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            SizedBox(height: largeSpacing),
+
+            // ==================== SINGLE VOLUME SLIDER (MOVED DOWN) ====================
             Padding(
               padding: EdgeInsets.symmetric(horizontal: largeSpacing),
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.volume_down),
+                    icon: const Icon(Icons.volume_mute),
                     onPressed: _decreaseVolume,
-                    color: AppColors.customWhite,
-                    iconSize: 24,
+                    color: AppColors.customWhite.withValues(alpha: 0.7),
+                    iconSize: 20,
                     tooltip: 'Тише',
                   ),
                   SizedBox(width: smallSpacing),
@@ -428,19 +534,31 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                     child: ValueListenableBuilder<double>(
                       valueListenable: _volumeNotifier,
                       builder: (_, volume, __) {
-                        return Slider(
-                          value: volume,
-                          min: 0.0,
-                          max: 1.0,
-                          divisions: null, // без делений
-                          onChanged: (value) {
-                            _volumeNotifier.value = value;
-                          },
-                          onChangeEnd: (value) {
-                            _setVolume(value);
-                          },
-                          activeColor: AppColors.customVolume,
-                          inactiveColor: AppColors.customWhiteTransp,
+                        return SliderTheme(
+                          data: SliderTheme.of(context).copyWith(
+                            activeTrackColor: AppColors.customStyle,
+                            inactiveTrackColor:
+                                const Color(0xFF1C212B),
+                            thumbColor: AppColors.customStyle,
+                            overlayColor:
+                                AppColors.customStyle.withValues(alpha: 0.2),
+                            trackHeight: 4,
+                            thumbShape: const RoundSliderThumbShape(
+                              enabledThumbRadius: 8,
+                            ),
+                          ),
+                          child: Slider(
+                            value: volume.clamp(0.0, 1.0),
+                            min: 0.0,
+                            max: 1.0,
+                            divisions: null,
+                            onChanged: (value) {
+                              _volumeNotifier.value = value;
+                            },
+                            onChangeEnd: (value) {
+                              _setVolume(value);
+                            },
+                          ),
                         );
                       },
                     ),
@@ -450,87 +568,12 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                   IconButton(
                     icon: const Icon(Icons.volume_up),
                     onPressed: _increaseVolume,
-                    color: AppColors.customWhite,
-                    iconSize: 24,
+                    color: AppColors.customWhite.withValues(alpha: 0.7),
+                    iconSize: 20,
                     tooltip: 'Громче',
                   ),
                 ],
               ),
-            ),
-            SizedBox(height: mediumSpacing),
-
-            // Название трека
-            ValueListenableBuilder<AudioMetadata?>(
-              valueListenable: _metadataNotifier,
-              builder: (_, metadata, __) {
-                String trackText = metadata?.title ?? 'Радио J-Rock';
-                if (metadata?.album != null && metadata!.album!.isNotEmpty) {
-                //  trackText = '${metadata.title} - ${metadata.album}';
-                  trackText = metadata.title;
-                }
-                return Padding(
-                  padding: EdgeInsets.symmetric(horizontal: largeSpacing),
-                  child: Text(
-                    trackText,
-                    style: TextStyle(
-                      fontSize: isCompact ? 12 : 14,
-                      color: AppColors.customWhite,
-                    ),
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                );
-              },
-            ),
-            SizedBox(height: smallSpacing),
-
-            // Обложка
-            ValueListenableBuilder<int>(
-              valueListenable: _imageUpdateNotifier,
-              builder: (_, imageVersion, __) {
-                return ValueListenableBuilder<AudioMetadata?>(
-                  valueListenable: _metadataNotifier,
-                  builder: (_, metadata, __) {
-                    return Container(
-                      width: coverSize,
-                      height: coverSize,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: AppColors.customTransp, // полностью прозрачная подсветка
-                            blurRadius: 6,
-                            offset: Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: _buildCoverImage(metadata, imageVersion),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-            SizedBox(height: smallSpacing),
-
-            // Исполнитель
-            ValueListenableBuilder<AudioMetadata?>(
-              valueListenable: _metadataNotifier,
-              builder: (_, metadata, __) {
-                return Text(
-                  metadata?.artist ?? 'Онлайн радио',
-                  style: TextStyle(
-                    fontSize: isCompact ? 16 : 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.customWhite,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                );
-              },
             ),
 
             SizedBox(height: smallSpacing),
@@ -548,15 +591,13 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
         imageUrl,
         fit: BoxFit.cover,
         key: ValueKey('$imageUrl$imageVersion'),
-        // Используем cacheWidth для оптимизации
-        cacheWidth: 150, // Оптимальный размер для маленьких обложек
+        cacheWidth: 200,
         filterQuality: FilterQuality.low,
         errorBuilder: (context, error, stackTrace) {
           return _buildDefaultCover();
         },
         loadingBuilder: (context, child, loadingProgress) {
           if (loadingProgress == null) return child;
-          // Упрощенный индикатор загрузки
           return Container(
             color: AppColors.customWhite,
             child: Center(
@@ -566,7 +607,8 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
                   value: loadingProgress.expectedTotalBytes != null
-                      ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                      ? loadingProgress.cumulativeBytesLoaded /
+                          loadingProgress.expectedTotalBytes!
                       : null,
                 ),
               ),
@@ -589,7 +631,8 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
       if (episode.imageUrl != null && episode.imageUrl!.isNotEmpty) {
         return episode.imageUrl;
       }
-      if (episode.channelImageUrl != null && episode.channelImageUrl!.isNotEmpty) {
+      if (episode.channelImageUrl != null &&
+          episode.channelImageUrl!.isNotEmpty) {
         return episode.channelImageUrl;
       }
     }
@@ -641,7 +684,7 @@ class ValueListenableBuilder2<A, B> extends StatelessWidget {
   final Widget? child;
 
   const ValueListenableBuilder2({
-    super.key, // Исправлено: используем super.key
+    super.key,
     required this.first,
     required this.second,
     required this.builder,

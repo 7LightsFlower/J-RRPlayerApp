@@ -20,7 +20,7 @@ class RadioButtonWithWaves extends StatelessWidget {
         final bool isBuffering = audioService.isBuffering;
         final bool hasConnection = audioService.hasNetworkConnection ?? true;
         
-        final double buttonSize = screenWidth * 0.25;
+        final double buttonSize = screenWidth * 0.5;
         
         return Container(
           margin: const EdgeInsets.symmetric(vertical: 4),
@@ -56,7 +56,7 @@ class RadioButtonWithWaves extends StatelessWidget {
                   ],
                 ),
                 child: ElevatedButton(
-                  onPressed: () => audioService.switchToRadio(),
+                  onPressed: () => audioService.toggleRadioOrPodcast(),
                   style: ElevatedButton.styleFrom(
                     backgroundColor:AppColors.customTransp,
                     foregroundColor: AppColors.customBackgr,
