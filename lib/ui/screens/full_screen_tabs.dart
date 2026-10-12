@@ -5,30 +5,33 @@ import 'package:jrrplayerapp/constants/strings.dart';
 import 'package:jrrplayerapp/ui/screens/articles_feed_screen.dart';
 import 'package:jrrplayerapp/ui/screens/news_feed_screen.dart';
 import 'package:jrrplayerapp/ui/screens/podcast_list_screen.dart';
+import 'package:jrrplayerapp/widgets/app_bottom_nav.dart';
 
 class FullScreenTabs extends StatefulWidget {
   final TabController tabController;
-  
+
   const FullScreenTabs({super.key, required this.tabController});
 
   @override
   State<FullScreenTabs> createState() => _FullScreenTabsState();
 }
 
-class _FullScreenTabsState extends State<FullScreenTabs> with SingleTickerProviderStateMixin {
+class _FullScreenTabsState extends State<FullScreenTabs>
+    with SingleTickerProviderStateMixin {
   late TabController _fullScreenTabController;
 
   @override
   void initState() {
     super.initState();
-    // Создаем новый контроллер для полноэкранного режима с сохранением позиции
     _fullScreenTabController = TabController(
-      length: 3, 
+      length: 3,
       vsync: this,
       initialIndex: widget.tabController.index,
     );
-    
-    // Настройка системной навигационной панели для полноэкранного режима
+    _fullScreenTabController.addListener(() {
+      if (mounted) setState(() {});
+    });
+
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   }
 
@@ -48,13 +51,14 @@ class _FullScreenTabsState extends State<FullScreenTabs> with SingleTickerProvid
         foregroundColor: AppColors.customBackgr,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          onPressed: () => Navigator.pop(context),
         ),
         title: const Text(AppStrings.appName),
         bottom: TabBar(
           controller: _fullScreenTabController,
+          labelColor: AppColors.customStyle,
+          unselectedLabelColor: AppColors.customBackgr.withValues(alpha: 0.6),
+          indicatorColor: AppColors.customStyle,
           tabs: const [
             Tab(text: AppStrings.articlesTab),
             Tab(text: AppStrings.newsTab),
@@ -63,12 +67,24 @@ class _FullScreenTabsState extends State<FullScreenTabs> with SingleTickerProvid
         ),
       ),
       body: SafeArea(
-        child: TabBarView(
-          controller: _fullScreenTabController,
-          children: const [
-            ArticlesFeedScreen(),
-            NewsFeedScreen(),
-            PodcastListScreen(),
+        child: Column(
+          children: [
+            Expanded(
+              child: TabBarView(
+                controller: _fullScreenTabController,
+                children: const [
+                  ArticlesFeedScreen(),
+                  NewsFeedScreen(),
+                  PodcastListScreen(),
+                ],
+              ),
+            ),
+            AppBottomNav(
+              currentIndex: _fullScreenTabController.index,
+              onTap: (index) {
+                _fullScreenTabController.animateTo(index);
+              },
+            ),
           ],
         ),
       ),
