@@ -186,6 +186,58 @@ class _PodcastItemState extends State<PodcastItem> {
     audioService.seekPodcast(newPosition);
   }
 
+  /// Renders the episode title with the segment before '|' on the first
+  /// line in the accent color, and the segment after '|' on the second
+  /// line in white. The '|' itself is hidden.
+  /// Falls back to plain white (single line) if there's no '|'.
+  Widget _buildHighlightedTitle(String title) {
+    const TextStyle baseStyle = TextStyle(
+      fontSize: 15,
+      fontWeight: FontWeight.w600,
+      height: 1.25,
+    );
+
+    final int barIndex = title.indexOf('|');
+
+    if (barIndex == -1) {
+      // No separator — render the whole title in white.
+      return Text(
+        title,
+        style: baseStyle.copyWith(color: Colors.white),
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      );
+    }
+
+    // Prefix = everything BEFORE the '|' (trimmed).
+    final String prefix = title.substring(0, barIndex).trimRight();
+    // Suffix = everything AFTER the '|' (trimmed).
+    final String suffix = title.substring(barIndex + 1).trimLeft();
+
+    return Text.rich(
+      TextSpan(
+        style: baseStyle,
+        children: [
+          if (prefix.isNotEmpty)
+            TextSpan(
+              text: prefix,
+              style: const TextStyle(color: AppColors.customStyle),
+            ),
+          if (prefix.isNotEmpty && suffix.isNotEmpty)
+            // Line break replaces the hidden '|'.
+            const TextSpan(text: '\n'),
+          if (suffix.isNotEmpty)
+            TextSpan(
+              text: suffix,
+              style: const TextStyle(color: Colors.white),
+            ),
+        ],
+      ),
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+
   String _formatDuration(Duration? duration) {
     if (duration == null) return '00:00';
     String twoDigits(int n) => n.toString().padLeft(2, '0');
@@ -285,31 +337,8 @@ class _PodcastItemState extends State<PodcastItem> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Channel name (teal, small)
-                  Text(
-                    widget.podcast.channelTitle,
-                    style: const TextStyle(
-                      color: AppColors.customStyle,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-
-                  // Episode title (white, bold, up to 2 lines)
-                  Text(
-                    widget.podcast.title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      height: 1.2,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  // Episode title with the segment before '|' highlighted in teal
+                  _buildHighlightedTitle(widget.podcast.title),
                   const SizedBox(height: 10),
 
                   // Progress bar (thin, teal, tappable via Slider)
@@ -320,12 +349,8 @@ class _PodcastItemState extends State<PodcastItem> {
                       inactiveTrackColor: const Color(0xFF2A3242),
                       thumbColor: AppColors.customStyle,
                       overlayColor: AppColors.customStyle.withValues(alpha: 0.15),
-                      thumbShape: const RoundSliderThumbShape(
-                        enabledThumbRadius: 5,
-                      ),
-                      overlayShape: const RoundSliderOverlayShape(
-                        overlayRadius: 12,
-                      ),
+                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
+                      overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
                     ),
                     child: Slider(
                       value: _sliderValue,

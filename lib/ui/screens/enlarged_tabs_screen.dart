@@ -43,14 +43,42 @@ class _EnlargedTabsScreenState extends State<EnlargedTabsScreen>
     return Scaffold(
       backgroundColor: AppColors.customBackgr,
       appBar: AppBar(
-        title: const Text(AppStrings.appName),
-        backgroundColor: AppColors.customWhite,
-        foregroundColor: AppColors.customBlack,
+        // Dark background matching the bottom navigation
+        backgroundColor: const Color(0xFF0F141E),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+
+        // App title styling
+        title: const Text(
+          AppStrings.appName,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.5,
+          ),
+        ),
+
+        // Tabs styling
         bottom: TabBar(
           controller: _tabController,
-          labelColor: AppColors.customStyle,
-          unselectedLabelColor: AppColors.customBlack.withValues(alpha: 0.6),
           indicatorColor: AppColors.customStyle,
+          indicatorWeight: 3,
+          indicatorSize: TabBarIndicatorSize.tab,
+          labelColor: AppColors.customStyle,
+          unselectedLabelColor: Colors.white.withValues(alpha: 0.6),
+          labelStyle: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.3,
+          ),
+          unselectedLabelStyle: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+            letterSpacing: 0.3,
+          ),
+          dividerColor: Colors.transparent,
           tabs: const [
             Tab(text: AppStrings.articlesTab),
             Tab(text: AppStrings.newsTab),

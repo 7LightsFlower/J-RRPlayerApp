@@ -472,9 +472,12 @@ class AboutScreen extends StatelessWidget {
             const SizedBox(height: 32),
             const Text(
               'J-Rock Radio — онлайн-радиостанция, посвящённая '
-              'японскому року и подкастам о нём. Слушайте любимые '
-              'треки в прямом эфире, читайте статьи и новости, '
-              'а также подкасты о японской музыкальной сцене.',
+              'Слушать, думать, жить\n'
+              'Человеку нужно место, где можно остановиться и подумать.'
+              'Без готовых ответов, правильных слов и необходимости соглашаться.'
+              'Здесь музыка соседствует с разговорами о человеке, Библии, истории, науке и жизни. '
+              'О том, что действительно важно, когда остаёшься один на один с собой. '
+              'Можно просто слушать. А можно вместе искать свои ответы. ',
               style: TextStyle(
                 color: Colors.white70,
                 fontSize: 14,
@@ -485,11 +488,11 @@ class AboutScreen extends StatelessWidget {
             const SizedBox(height: 32),
             const Divider(color: Color(0xFF1C212B), thickness: 1),
             const SizedBox(height: 16),
-            _buildInfoRow(Icons.copyright, 'Все права защищены', 'J-Rock Radio'),
+            _buildInfoRow(Icons.copyright, 'Все права защищены', 'Радио J-Rock'),
             const SizedBox(height: 12),
-            _buildInfoRow(Icons.code, 'Разработчик', 'J-RRPlayer Team'),
+            _buildInfoRow(Icons.code, 'Разработчик', 'Команда Радио J-Rock'),
             const SizedBox(height: 12),
-            _buildInfoRow(Icons.web, 'Сайт', 'jrock-radio.example'),
+            _buildInfoRow(Icons.web, 'Сайт', 'рttps://jrock.ru'),
           ],
         ),
       ),

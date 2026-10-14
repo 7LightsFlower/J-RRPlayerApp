@@ -19,8 +19,8 @@ class AppStrings {
   static const String livestreamUrl = 'https://nradio.net/jrock';
   static const String vkontakteUrl = 'https://vk.com/jrockradio';
   static const String telegramUrl = 'https://telegram.me/jrockradio';
-  static const String wwweblinkUrl = 'https://jrock.pro';
-  static const String articlesFeedUrl = 'https://jrock.pro/lenta';
+  static const String wwweblinkUrl = 'https://jrock.ru';
+  static const String articlesFeedUrl = 'https://jrock.ru/lenta';
   static const String newsFeedUrl = 'https://telegram.me/s/jrr_news';
     // Базовый URL для отдельных новостей (по ID)
   static const String telegramNewsBaseUrl = 'https://telegram.me/jrr_news/';
