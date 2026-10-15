@@ -1,103 +1,121 @@
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:jrrplayerapp/services/audio_player_service.dart';
-import 'package:jrrplayerapp/constants/app_colors.dart';
 import 'dart:math';
+
+import 'package:flutter/material.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:provider/provider.dart';
+
+import 'package:jrrplayerapp/constants/app_colors.dart';
+import 'package:jrrplayerapp/services/audio_player_service.dart';
 
 class RadioButtonWithWaves extends StatelessWidget {
   final double screenWidth;
 
-  const RadioButtonWithWaves({
-    super.key,
-    required this.screenWidth,
-  });
+  const RadioButtonWithWaves({super.key, required this.screenWidth});
 
   @override
   Widget build(BuildContext context) {
+    final double buttonSize = screenWidth * 0.5;
+    final audioService = context.read<AudioPlayerService>();
+    final player = audioService.getPlayer();
+
     return Consumer<AudioPlayerService>(
-      builder: (context, audioService, child) {
-        final bool isPlaying = audioService.playerState?.playing ?? false;
-        final bool isBuffering = audioService.isBuffering;
-        final bool hasConnection = audioService.hasNetworkConnection ?? true;
-        
-        final double buttonSize = screenWidth * 0.5;
-        
-        return Container(
-          margin: const EdgeInsets.symmetric(vertical: 4),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Анимированные волны (игнорируем нажатия)
-              if (!isBuffering) 
-                ..._buildWaveLayers(buttonSize, audioService, isPlaying, hasConnection).map(
-                  (wave) => IgnorePointer(child: wave)
-                ),
-              
-              // Перечеркивающая линия при отсутствии интернета
-              if (!hasConnection && !isBuffering)
-                _CrossLine(
-                  size: buttonSize * 0.75,
-                  verticalOffset: -buttonSize * 0.15,
-                ),
-              
-              // Круглая кнопка
-              Container(
-                width: buttonSize,
-                height: buttonSize,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    if (isPlaying && !isBuffering && hasConnection)
-                      const BoxShadow(
-                        color: AppColors.customTransp, // полностью прозрачная подсветка
-                        blurRadius: 10,
-                        spreadRadius: 2,
-                      ),
-                  ],
-                ),
-                child: ElevatedButton(
-                  onPressed: () => audioService.toggleRadioOrPodcast(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor:AppColors.customTransp,
-                    foregroundColor: AppColors.customBackgr,
-                    shape: const CircleBorder(),
-                    padding: EdgeInsets.zero,
-                    elevation: 0,
-                  ),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      // Основная иконка
-                      Image.asset(
-                        'assets/images/icon_jrockradio_custom_style.png',
-                        width: buttonSize * 1.0,
-                        height: buttonSize * 1.0,
-                        fit: BoxFit.contain,
-                      ),
-                      
-                      // Индикатор загрузки
-                      if (isBuffering)
-                        CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            _getWaveColor(hasConnection),
-                          ),
-                          strokeWidth: 2,
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
+      builder: (context, service, _) {
+        final bool hasConnection = service.hasNetworkConnection ?? true;
+
+        // Если плеер ещё не создан — рисуем кнопку в «спокойном» состоянии.
+        if (player == null) {
+          return _buildStaticButton(context, service, buttonSize, hasConnection);
+        }
+
+        // Слушаем реальные события just_audio напрямую.
+        return StreamBuilder<PlayerState>(
+          stream: player.playerStateStream,
+          builder: (context, snapshot) {
+            final state = snapshot.data;
+            final bool isPlaying = state?.playing ?? false;
+            final bool isBuffering = state?.processingState == ProcessingState.loading ||
+                state?.processingState == ProcessingState.buffering;
+
+            return _buildButton(
+              context,
+              service,
+              buttonSize,
+              isPlaying: isPlaying,
+              isBuffering: isBuffering,
+              hasConnection: hasConnection,
+            );
+          },
         );
       },
     );
   }
 
-  List<Widget> _buildWaveLayers(double buttonSize, AudioPlayerService audioService, bool isPlaying, bool hasConnection) {
+  // -------------------- СТАТИЧНАЯ КНОПКА (плеер ещё не готов) --------------------
+  Widget _buildStaticButton(
+    BuildContext context,
+    AudioPlayerService service,
+    double buttonSize,
+    bool hasConnection,
+  ) {
+    return _buildButton(
+      context,
+      service,
+      buttonSize,
+      isPlaying: false,
+      isBuffering: false,
+      hasConnection: hasConnection,
+    );
+  }
+
+  // -------------------- ОБЩИЙ BUILD --------------------
+  Widget _buildButton(
+    BuildContext context,
+    AudioPlayerService service,
+    double buttonSize, {
+    required bool isPlaying,
+    required bool isBuffering,
+    required bool hasConnection,
+  }) {
+    // Свечение — только когда реально играет, не грузится и есть сеть.
+    final bool showGlow = isPlaying && !isBuffering && hasConnection;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // ============ ВОЛНЫ ============
+          if (!isBuffering)
+            ..._buildWaveLayers(buttonSize, isPlaying, hasConnection)
+                .map((w) => IgnorePointer(child: w)),
+
+          // ============ ПЕРЕЧЁРКНУТО ПРИ ОБРЫВЕ СЕТИ ============
+          if (!hasConnection && !isBuffering)
+            _CrossLine(
+              size: buttonSize * 0.75,
+              verticalOffset: -buttonSize * 0.15,
+            ),
+
+          // ============ КНОПКА СО СВЕЧЕНИЕМ ============
+          _GlowingIconButton(
+            size: buttonSize,
+            showGlow: showGlow,
+            hasConnection: hasConnection,
+            isBuffering: isBuffering,
+            onPressed: () => service.toggleRadioOrPodcast(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildWaveLayers(
+    double buttonSize,
+    bool isPlaying,
+    bool hasConnection,
+  ) {
     final waveColor = _getWaveColor(hasConnection);
     return [
-      // Первая волна (самая большая)
       _AnimatedWave(
         color: waveColor,
         size: buttonSize * 0.50,
@@ -105,7 +123,6 @@ class RadioButtonWithWaves extends StatelessWidget {
         verticalOffset: -buttonSize * 0.15,
         isPlaying: isPlaying,
       ),
-      // Вторая волна
       _AnimatedWave(
         color: waveColor,
         size: buttonSize * 0.30,
@@ -113,7 +130,6 @@ class RadioButtonWithWaves extends StatelessWidget {
         verticalOffset: -buttonSize * 0.15,
         isPlaying: isPlaying,
       ),
-      // Третья волна
       _AnimatedWave(
         color: waveColor,
         size: buttonSize * 0.10,
@@ -124,15 +140,140 @@ class RadioButtonWithWaves extends StatelessWidget {
     ];
   }
 
-  Color _getWaveColor(bool hasConnection) {
-    if (!hasConnection) {
-      return AppColors.customRed; // Красный при отсутствии соединения
+  Color _getWaveColor(bool hasConnection) =>
+      hasConnection ? AppColors.customGreen : AppColors.customRed;
+}
+
+// =============================================================
+// КНОПКА С ПУЛЬСИРУЮЩИМ СВЕЧЕНИЕМ
+// =============================================================
+class _GlowingIconButton extends StatefulWidget {
+  final double size;
+  final bool showGlow;
+  final bool hasConnection;
+  final bool isBuffering;
+  final VoidCallback onPressed;
+
+  const _GlowingIconButton({
+    required this.size,
+    required this.showGlow,
+    required this.hasConnection,
+    required this.isBuffering,
+    required this.onPressed,
+  });
+
+  @override
+  State<_GlowingIconButton> createState() => _GlowingIconButtonState();
+}
+
+class _GlowingIconButtonState extends State<_GlowingIconButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+      lowerBound: 0.0,
+      upperBound: 1.0,
+    );
+    if (widget.showGlow) {
+      _pulse.repeat(reverse: true);
     }
-    
-    return AppColors.customGreen; // Зеленый при нормальной работе
+  }
+
+  @override
+  void didUpdateWidget(_GlowingIconButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.showGlow && !_pulse.isAnimating) {
+      _pulse.repeat(reverse: true);
+    } else if (!widget.showGlow && _pulse.isAnimating) {
+      _pulse.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final double size = widget.size;
+
+    return AnimatedBuilder(
+      animation: _pulse,
+      builder: (context, child) {
+        final double t = widget.showGlow ? _pulse.value : 0.0;
+
+        return Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            boxShadow: widget.showGlow
+                ? [
+                    // Внутреннее яркое свечение
+                    BoxShadow(
+                      color: AppColors.customStyle
+                          .withValues(alpha: 0.35 + 0.35 * t),
+                      blurRadius: 18 + 22 * t,
+                      spreadRadius: 2 + 5 * t,
+                    ),
+                    // Внешнее мягкое гало
+                    BoxShadow(
+                      color: AppColors.customStyle
+                          .withValues(alpha: 0.12 + 0.15 * t),
+                      blurRadius: 38 + 22 * t,
+                      spreadRadius: 3 + 4 * t,
+                    ),
+                  ]
+                : null,
+          ),
+          child: child,
+        );
+      },
+      child: ElevatedButton(
+        onPressed: widget.onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.customTransp,
+          foregroundColor: AppColors.customBackgr,
+          shape: const CircleBorder(),
+          padding: EdgeInsets.zero,
+          elevation: 0,
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Image.asset(
+              'assets/images/icon_jrockradio_custom_style.png',
+              width: size,
+              height: size,
+              fit: BoxFit.contain,
+            ),
+            if (widget.isBuffering)
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  widget.hasConnection
+                      ? AppColors.customGreen
+                      : AppColors.customRed,
+                ),
+                strokeWidth: 2,
+              ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
+// =============================================================
+
+// АНИМИРОВАННАЯ ВОЛНА
+// =============================================================
 class _AnimatedWave extends StatefulWidget {
   final Color color;
   final double size;
@@ -149,64 +290,35 @@ class _AnimatedWave extends StatefulWidget {
   });
 
   @override
-  _AnimatedWaveState createState() => _AnimatedWaveState();
+  State<_AnimatedWave> createState() => _AnimatedWaveState();
 }
 
-class _AnimatedWaveState extends State<_AnimatedWave> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
-  bool _animationStarted = false;
+class _AnimatedWaveState extends State<_AnimatedWave>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _animation;
 
   @override
   void initState() {
     super.initState();
-    
+
     _controller = AnimationController(
       duration: const Duration(milliseconds: 2000),
       vsync: this,
-    );
+    )..repeat(reverse: false);
 
-    _animation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(
+    // Сдвигаем старт анимации в зависимости от widget.delay.
+    // delay = 0    → старт сразу (begin = 0.0)
+    // delay = 500  → старт через 500 мс из 2000 (begin = 0.25)
+    // delay = 1000 → старт через 1000 мс из 2000 (begin = 0.5)
+    final double begin = (widget.delay / 2000).clamp(0.0, 1.0);
+
+    _animation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: Curves.easeOut,
+        curve: Interval(begin, 1.0, curve: Curves.easeOut),
       ),
     );
-
-    // Задержка для создания эффекта последовательных волн
-    Future.delayed(Duration(milliseconds: widget.delay), () {
-      if (mounted && widget.isPlaying) {
-        _controller.repeat(reverse: false);
-        _animationStarted = true;
-      }
-    });
-  }
-
-  @override
-  void didUpdateWidget(_AnimatedWave oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    
-    // Управление анимацией в зависимости от состояния воспроизведения
-    if (widget.isPlaying && !_controller.isAnimating) {
-      if (!_animationStarted) {
-        // Если анимация еще не начиналась, запускаем с задержкой
-        Future.delayed(Duration(milliseconds: widget.delay), () {
-          if (mounted) {
-            _controller.repeat(reverse: false);
-            _animationStarted = true;
-          }
-        });
-      } else {
-        // Если анимация уже была запущена, продолжаем с текущей позиции
-        _controller.repeat(reverse: false);
-      }
-    } else if (!widget.isPlaying && _controller.isAnimating) {
-      // Останавливаем анимацию, но сохраняем текущее состояние
-      _controller.stop();
-    }
   }
 
   @override
@@ -220,15 +332,16 @@ class _AnimatedWaveState extends State<_AnimatedWave> with SingleTickerProviderS
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, child) {
-        // Вычисляем альфа-канал вместо использования withOpacity
-        final double opacityValue = 0.7 - (_animation.value * 0.6);
+        // Волна видна только когда играет; иначе — alpha = 0.
+        final double visible = widget.isPlaying ? 1.0 : 0.0;
+        final double opacityValue = (0.7 - (_animation.value * 0.6)) * visible;
         final int alpha = (opacityValue * 255).round();
         final Color animatedColor = widget.color.withAlpha(alpha);
-        
+
         return Transform.translate(
           offset: Offset(0, widget.verticalOffset),
           child: Opacity(
-            opacity: 1.0 - _animation.value,
+            opacity: (1.0 - _animation.value) * visible,
             child: Transform.rotate(
               angle: 120 * (pi / 180),
               child: CustomPaint(
@@ -289,10 +402,7 @@ class _CrossLine extends StatelessWidget {
   final double size;
   final double verticalOffset;
 
-  const _CrossLine({
-    required this.size,
-    required this.verticalOffset,
-  });
+  const _CrossLine({required this.size, required this.verticalOffset});
 
   @override
   Widget build(BuildContext context) {
@@ -301,9 +411,7 @@ class _CrossLine extends StatelessWidget {
       child: SizedBox(
         width: size,
         height: size,
-        child: CustomPaint(
-          painter: _CrossLinePainter(),
-        ),
+        child: CustomPaint(painter: _CrossLinePainter()),
       ),
     );
   }
@@ -318,19 +426,8 @@ class _CrossLinePainter extends CustomPainter {
       ..strokeWidth = 3.0
       ..strokeCap = StrokeCap.round;
 
-    // Рисуем диагональную линию под углом 45 градусов
-    canvas.drawLine(
-      const Offset(0, 0),
-      Offset(size.width, size.height),
-      paint,
-    );
-
-    // Рисуем вторую диагональную линию под углом 45 градусов (в другую сторону)
-    canvas.drawLine(
-      Offset(size.width, 0),
-      Offset(0, size.height),
-      paint,
-    );
+    canvas.drawLine(const Offset(0, 0), Offset(size.width, size.height), paint);
+    canvas.drawLine(Offset(size.width, 0), Offset(0, size.height), paint);
   }
 
   @override

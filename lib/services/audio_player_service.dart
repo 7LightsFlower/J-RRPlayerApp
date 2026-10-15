@@ -284,7 +284,9 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
         _player = AudioPlayer()
           ..playerStateStream.listen((state) {
             _playerState = state;
-            _isBuffering = state.processingState == ProcessingState.buffering;
+            _isBuffering =
+                state.processingState == ProcessingState.loading ||
+                state.processingState == ProcessingState.buffering;
 
             debugPrint('Player state changed: '
               'playing=${state.playing}, '
@@ -1212,7 +1214,11 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
   }
 
   /// Unified toggle for the logo button in RadioButtonWithWaves.
-  /// Works correctly whether we're currently in radio or podcast mode.
+  ///
+  /// - Если играет/паузится подкаст → полностью останавливаем его
+  ///   и запускаем радио.
+  /// - Если играет/паузится радио → обычный pause/resume.
+  /// - Если ничего не играет → запускаем радио.
   Future<void> toggleRadioOrPodcast() async {
     debugPrint('🎵 toggleRadioOrPodcast called');
     debugPrint('🎵   isPodcastMode: $_isPodcastMode');
@@ -1222,14 +1228,41 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
     debugPrint('🎵   isRadioPaused: $isRadioPaused');
     debugPrint('🎵   isRadioStopped: $isRadioStopped');
 
-    // Podcast mode: toggle the podcast playback
+    // === РЕЖИМ ПОДКАСТА: одно нажатие = стоп подкаста + старт радио ===
     if (_isPodcastMode && _currentEpisode != null) {
-      debugPrint('🎵 Podcast mode -> togglePodcastPlayback');
-      await togglePodcastPlayback(_currentEpisode!);
+      debugPrint('🎵 Podcast mode -> switching to radio');
+
+      // 1. Сохраняем позицию подкаста (чтобы потом можно было вернуться)
+      await _saveCurrentPosition();
+
+      // 2. Останавливаем таймер метаданных (для Web)
+      if (kIsWeb) {
+        _stopWebMetadataPolling();
+      }
+
+      // 3. Полностью останавливаем плеер и очищаем текущий источник
+      final player = getPlayer();
+      if (player != null) {
+        await player.stop();
+      }
+
+      // 4. Сбрасываем режим подкаста
+      _isPodcastMode = false;
+      _currentEpisode = null;
+      _currentOperationId = null;
+      _lastWebTrackId = null;
+      _isRadioStopped = false; // важно: чтобы playRadio() понял, что нужно стартовать заново
+
+      // 5. Сбрасываем метаданные и уведомляем UI
+      resetMetadata();
+      _notifyListeners();
+
+      // 6. Запускаем радио
+      await playRadio();
       return;
     }
 
-    // Radio mode: toggle radio playback
+    // === РЕЖИМ РАДИО: обычный toggle ===
     debugPrint('🎵 Radio mode -> toggleRadio');
     await toggleRadio();
   }

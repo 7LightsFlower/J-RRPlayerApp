@@ -170,7 +170,6 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   }
 
   Future<void> _togglePlayPause() async {
-    // Guard: ignore taps while a toggle is already in progress
     if (_isToggling) {
       debugPrint('🎵 Toggle ignored: already toggling');
       return;
@@ -185,8 +184,6 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
 
       if (isCurrentlyPlaying) {
         debugPrint('🎵 Switching to PAUSE');
-        // Fire-and-forget — don't await the whole stream teardown.
-        // _syncPlayerState() will pick up the new state within 1s.
         unawaited(_audioService.pause());
       } else {
         debugPrint('🎵 Switching to PLAY');
@@ -197,21 +194,17 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
         } else {
           _audioService.getPlayer();
           final isRadioPaused = _audioService.isRadioPaused;
-          final isRadioStopped = _audioService.isRadioStopped;
 
-          debugPrint('🎵 Radio state: paused=$isRadioPaused, stopped=$isRadioStopped');
+          debugPrint('🎵 Radio state: paused=$isRadioPaused');
 
           if (isRadioPaused) {
             unawaited(_audioService.resumeRadioFromPause());
           } else {
-            // Both "stopped" and "unknown" → start fresh
             unawaited(_audioService.playRadio());
           }
         }
       }
 
-      // Optimistically update the button icon right away so the UI
-      // doesn't wait 1s for _syncPlayerState().
       if (mounted) {
         setState(() {
           _playingNotifier.value = !isCurrentlyPlaying;
@@ -221,7 +214,6 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
       debugPrint('🎵 Error in toggle play/pause: $e');
       _showErrorSnackBar('Error: $e');
     } finally {
-      // ✅ CRITICAL: always release the guard, even if something threw.
       if (mounted) {
         setState(() {
           _isToggling = false;
@@ -310,11 +302,8 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     final maxPlayerHeight = screenHeight * 0.6;
     final bool isCompact = maxPlayerHeight < 400;
 
-    // Bigger play/pause button
     final double playButtonSize = isCompact ? 68.0 : 84.0;
     final double skipIconSize = isCompact ? 32.0 : 38.0;
-
-    // Album cover sized generously for the left-side layout
     final double coverSize = isCompact ? 72.0 : 88.0;
 
     final double smallSpacing = isCompact ? 4.0 : 8.0;
@@ -356,7 +345,8 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.customStyle.withValues(alpha: 0.35),
+                            color:
+                                AppColors.customStyle.withValues(alpha: 0.35),
                             blurRadius: 20,
                             spreadRadius: 2,
                           ),
@@ -401,125 +391,117 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
             ),
             SizedBox(height: largeSpacing),
 
-            // ==================== ALBUM COVER + TRACK INFO (CENTERED BLOCK) ====================
-            Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: largeSpacing),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,   // ⬅ ключевое: Row сжимается по контенту
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // ---- ALBUM COVER ----
-                    ValueListenableBuilder<int>(
-                      valueListenable: _imageUpdateNotifier,
-                      builder: (_, imageVersion, __) {
-                        return ValueListenableBuilder<AudioMetadata?>(
+            // ============ ALBUM COVER + TRACK INFO (FIXED LAYOUT) ============
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: largeSpacing),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // ---- ALBUM COVER (фиксированная ширина) ----
+                  ValueListenableBuilder<int>(
+                    valueListenable: _imageUpdateNotifier,
+                    builder: (_, imageVersion, __) {
+                      return ValueListenableBuilder<AudioMetadata?>(
+                        valueListenable: _metadataNotifier,
+                        builder: (_, metadata, __) {
+                          return Container(
+                            width: coverSize,
+                            height: coverSize,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(10),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: AppColors.customTransp,
+                                  blurRadius: 6,
+                                  offset: Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: _buildCoverImage(metadata, imageVersion),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                  SizedBox(width: mediumSpacing),
+
+                  // ---- TRACK INFO (занимает всё оставшееся место) ----
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // "СЕЙЧАС В ЭФИРЕ"
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.bar_chart,
+                              color: AppColors.customStyle,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'СЕЙЧАС В ЭФИРЕ',
+                              style: TextStyle(
+                                color: AppColors.customStyle
+                                    .withValues(alpha: 0.85),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 1,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+
+                        // Track title
+                        ValueListenableBuilder<AudioMetadata?>(
                           valueListenable: _metadataNotifier,
                           builder: (_, metadata, __) {
-                            return Container(
-                              width: coverSize,
-                              height: coverSize,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(10),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: AppColors.customTransp,
-                                    blurRadius: 6,
-                                    offset: Offset(0, 3),
-                                  ),
-                                ],
+                            final title =
+                                metadata?.title ?? 'Радио J-Rock';
+                            return Text(
+                              title,
+                              style: TextStyle(
+                                fontSize: isCompact ? 16 : 18,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.customWhite,
                               ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(10),
-                                child: _buildCoverImage(metadata, imageVersion),
-                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             );
                           },
-                        );
-                      },
+                        ),
+                        const SizedBox(height: 4),
+
+                        // Artist
+                        ValueListenableBuilder<AudioMetadata?>(
+                          valueListenable: _metadataNotifier,
+                          builder: (_, metadata, __) {
+                            return Text(
+                              metadata?.artist ?? 'Онлайн радио',
+                              style: TextStyle(
+                                fontSize: isCompact ? 13 : 14,
+                                color: AppColors.customWhite
+                                    .withValues(alpha: 0.6),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            );
+                          },
+                        ),
+                      ],
                     ),
-                    SizedBox(width: mediumSpacing),
-
-                    // ---- TRACK INFO ----
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        return ConstrainedBox(
-                          constraints: BoxConstraints(
-                            maxWidth: constraints.maxWidth * 0.75,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // "СЕЙЧАС В ЭФИРЕ"
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.bar_chart,
-                                    color: AppColors.customStyle,
-                                    size: 16,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'СЕЙЧАС В ЭФИРЕ',
-                                    style: TextStyle(
-                                      color: AppColors.customStyle.withValues(alpha: 0.85),
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w600,
-                                      letterSpacing: 1,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-
-                              // Track title
-                              ValueListenableBuilder<AudioMetadata?>(
-                                valueListenable: _metadataNotifier,
-                                builder: (_, metadata, __) {
-                                  final title = metadata?.title ?? 'Радио J-Rock';
-                                  return Text(
-                                    title,
-                                    style: TextStyle(
-                                      fontSize: isCompact ? 16 : 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.customWhite,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  );
-                                },
-                              ),
-                              const SizedBox(height: 4),
-
-                              // Artist
-                              ValueListenableBuilder<AudioMetadata?>(
-                                valueListenable: _metadataNotifier,
-                                builder: (_, metadata, __) {
-                                  return Text(
-                                    metadata?.artist ?? 'Онлайн радио',
-                                    style: TextStyle(
-                                      fontSize: isCompact ? 13 : 14,
-                                      color: AppColors.customWhite.withValues(alpha: 0.6),
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  );
-                                },
-                              ),
-                            ],
-
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
             SizedBox(height: largeSpacing),
 
-            // ==================== SINGLE VOLUME SLIDER (MOVED DOWN) ====================
+            // ==================== SINGLE VOLUME SLIDER ====================
             Padding(
               padding: EdgeInsets.symmetric(horizontal: largeSpacing),
               child: Row(
@@ -543,8 +525,8 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                             inactiveTrackColor:
                                 const Color(0xFF1C212B),
                             thumbColor: AppColors.customStyle,
-                            overlayColor:
-                                AppColors.customStyle.withValues(alpha: 0.2),
+                            overlayColor: AppColors.customStyle
+                                .withValues(alpha: 0.2),
                             trackHeight: 4,
                             thumbShape: const RoundSliderThumbShape(
                               enabledThumbRadius: 8,
