@@ -22,6 +22,12 @@ class AppStrings {
   static const String wwweblinkUrl = 'https://jrock.ru';
   static const String articlesFeedUrl = 'https://jrock.ru/lenta';
   static const String newsFeedUrl = 'https://telegram.me/s/jrr_news';
+  static const List<String> newsFeedUrls = [
+    'https://app.diri.su/rss/posting/32266eefb24e7cb14e1d954719dd2953.xml',
+    'https://app.diri.su/rss/posting/3f059a15f6b3e63b8783fa88ecdf9855.xml',
+    'https://app.diri.su/rss/posting/0adfd68a63caa61374c28de3a92e2677.xml',
+  ];
+
     // Базовый URL для отдельных новостей (по ID)
   static const String telegramNewsBaseUrl = 'https://telegram.me/jrr_news/';
   // Podcast RSS Feed mit Proxy-Optionen

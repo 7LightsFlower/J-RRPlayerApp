@@ -28,10 +28,37 @@ class NewsDetailScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             if (news.imageUrl.isNotEmpty) ...[
-              Image.network(
-                news.imageUrl,
-                width: double.infinity,
-                fit: BoxFit.contain,
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.network(
+                  news.imageUrl,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    height: 200,
+                    color: const Color(0xFF232A36),
+                    child: const Center(
+                      child: Icon(
+                        Icons.image_not_supported_outlined,
+                        color: AppColors.customGrey,
+                        size: 48,
+                      ),
+                    ),
+                  ),
+                  loadingBuilder: (context, child, progress) {
+                    if (progress == null) return child;
+                    return Container(
+                      height: 200,
+                      color: const Color(0xFF232A36),
+                      child: const Center(
+                        child: CircularProgressIndicator(
+                          color: AppColors.customGreen,
+                          strokeWidth: 2,
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ),
               const SizedBox(height: 16),
             ],

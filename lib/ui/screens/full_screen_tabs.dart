@@ -42,6 +42,17 @@ class _FullScreenTabsState extends State<FullScreenTabs>
     super.dispose();
   }
 
+  Widget _buildTabContent() {
+    return TabBarView(
+      controller: _fullScreenTabController,
+      children: const [
+        ArticlesFeedScreen(),
+        NewsFeedScreen(),
+        PodcastListScreen(),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -57,7 +68,8 @@ class _FullScreenTabsState extends State<FullScreenTabs>
         bottom: TabBar(
           controller: _fullScreenTabController,
           labelColor: AppColors.customStyle,
-          unselectedLabelColor: AppColors.customBackgr.withValues(alpha: 0.6),
+          unselectedLabelColor:
+              AppColors.customBackgr.withValues(alpha: 0.6),
           indicatorColor: AppColors.customStyle,
           tabs: const [
             Tab(text: AppStrings.articlesTab),
@@ -67,25 +79,34 @@ class _FullScreenTabsState extends State<FullScreenTabs>
         ),
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: TabBarView(
-                controller: _fullScreenTabController,
-                children: const [
-                  ArticlesFeedScreen(),
-                  NewsFeedScreen(),
-                  PodcastListScreen(),
-                ],
-              ),
-            ),
-            AppBottomNav(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final Size screen = MediaQuery.of(context).size;
+            final bool isWide = screen.width > screen.height;
+
+            final nav = AppBottomNav(
               currentIndex: _fullScreenTabController.index,
-              onTap: (index) {
-                _fullScreenTabController.animateTo(index);
-              },
-            ),
-          ],
+              onTap: (index) => _fullScreenTabController.animateTo(index),
+            );
+
+            if (isWide) {
+              // Landscape → rail on the left.
+              return Row(
+                children: [
+                  Expanded(child: _buildTabContent()),
+                  nav,
+                ],
+              );
+            }
+
+            // Portrait → bottom bar.
+            return Column(
+              children: [
+                Expanded(child: _buildTabContent()),
+                nav,
+              ],
+            );
+          },
         ),
       ),
     );

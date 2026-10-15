@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:html/parser.dart' as parser;
-import 'package:html/dom.dart' as dom;
+import 'package:xml/xml.dart' as xml;
 import 'package:jrrplayerapp/constants/app_colors.dart';
-
 import 'package:jrrplayerapp/models/news.dart';
 import 'package:jrrplayerapp/widgets/news_item.dart';
 import 'package:jrrplayerapp/constants/strings.dart';
@@ -17,19 +15,14 @@ class NewsFeedScreen extends StatefulWidget {
 class _NewsFeedScreenState extends State<NewsFeedScreen> {
   List<News> _news = [];
   bool _isLoading = true;
-  bool _isLoadingMore = false;
   String _error = '';
-  bool _hasInternetError = false;
-  int _currentPage = 1;
-  bool _hasMorePages = true;
   final ScrollController _scrollController = ScrollController();
-  final Set<String> _loadedNewsUrls = {};
+  final Set<String> _loadedGuids = {};
 
   @override
   void initState() {
     super.initState();
     _loadNews();
-    _scrollController.addListener(_scrollListener);
   }
 
   @override
@@ -38,268 +31,177 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
     super.dispose();
   }
 
-  void _scrollListener() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200) {
-      _loadMoreNews();
-    }
-  }
-
+  // ==================== LOADING ====================
   Future<void> _loadNews() async {
     setState(() {
       _isLoading = true;
       _error = '';
-      _currentPage = 1;
-      _hasMorePages = true;
       _news.clear();
-      _loadedNewsUrls.clear();
+      _loadedGuids.clear();
     });
 
     try {
-      final url = AppStrings.proxyUrl(AppStrings.newsFeedUrl);
-      final response = await AppStrings.getWithProxy(url);
+      // Fetch all three feeds in parallel.
+      final responses = await Future.wait(
+        AppStrings.newsFeedUrls.map(
+          (url) => AppStrings.getWithProxy(url),
+        ),
+      );
 
-      if (response.statusCode == 200) {
-        _parseHtml(response.body, isFirstLoad: true);
-      } else {
-        throw Exception('HTTP ${response.statusCode}');
+      final List<News> combined = [];
+      for (int i = 0; i < responses.length; i++) {
+        final resp = responses[i];
+        if (resp.statusCode == 200) {
+          final parsed = _parseRss(resp.body);
+          debugPrint(
+            '📰 Feed ${i + 1}: ${parsed.length} items '
+            '(${AppStrings.newsFeedUrls[i]})',
+          );
+          combined.addAll(parsed);
+        } else {
+          debugPrint('⚠️ Feed ${i + 1} failed: HTTP ${resp.statusCode}');
+        }
       }
+
+      if (combined.isEmpty) {
+        throw Exception('Не удалось загрузить ни одного источника');
+      }
+
+      // Deduplicate by guid (across feeds — some items might be shared).
+      final Map<String, News> unique = {};
+      for (final n in combined) {
+        unique.putIfAbsent(n.id, () => n);
+      }
+
+      // Sort by date descending (newest first).
+      final sorted = unique.values.toList()
+        ..sort((a, b) => b.parsedDate.compareTo(a.parsedDate));
+
+      setState(() {
+        _news = sorted;
+        _isLoading = false;
+      });
+
+      debugPrint('✅ Всего новостей: ${sorted.length}');
     } catch (e) {
+      debugPrint('❌ Ошибка загрузки новостей: $e');
       setState(() {
         _error = 'Не удалось загрузить новости: $e';
-        _hasInternetError = true;
         _isLoading = false;
       });
     }
   }
 
-  Future<void> _loadMoreNews() async {
-    if (_isLoadingMore || !_hasMorePages) return;
-    setState(() => _isLoadingMore = true);
+  // ==================== RSS PARSER ====================
+  List<News> _parseRss(String xmlBody) {
+    final List<News> result = [];
 
     try {
-      final nextPage = _currentPage + 1;
-      final url = AppStrings.proxyUrl('${AppStrings.newsFeedUrl}$nextPage/');
-      final response = await AppStrings.getWithProxy(url);
+      final document = xml.XmlDocument.parse(xmlBody);
+      final items = document.findAllElements('item');
 
-      if (response.statusCode == 200 && response.body.contains('tgme_widget_message')) {
-        _parseHtml(response.body, isFirstLoad: false);
-      } else {
-        setState(() => _hasMorePages = false);
+      for (final item in items) {
+        try {
+          final title = _text(item, 'title');
+          final link = _text(item, 'link');
+          final guid = _text(item, 'guid') ?? link;
+          final pubDate = _text(item, 'pubDate');
+          final rawDescription = _text(item, 'description') ?? '';
+
+          // Enclosure image URL (this is where the JRR feed puts the cover).
+          String imageUrl = '';
+          final enclosure = item.findElements('enclosure').firstOrNull;
+          if (enclosure != null) {
+            imageUrl = enclosure.getAttribute('url') ?? '';
+          }
+
+          if (title == null || title.isEmpty) continue;
+
+          final parsedDate = _parseRfc822(pubDate);
+
+          result.add(
+            News(
+              id: guid ?? link ?? title,
+              title: _stripHtml(title),
+              date: _formatDate(parsedDate),
+              imageUrl: imageUrl,
+              description: rawDescription, // keep HTML for detail screen
+              url: link ?? '',
+              parsedDate: parsedDate,
+            ),
+          );
+        } catch (e) {
+          debugPrint('❌ Ошибка парсинга item: $e');
+        }
       }
     } catch (e) {
-      setState(() => _hasMorePages = false);
-    } finally {
-      setState(() => _isLoadingMore = false);
+      debugPrint('❌ Ошибка парсинга RSS XML: $e');
     }
+
+    return result;
   }
 
-  void _parseHtml(String htmlContent, {required bool isFirstLoad}) {
-    try {
-      final document = parser.parse(htmlContent);
-      List<News> loadedNews = [];
-
-      // Парсим Telegram сообщения
-      final messageWraps = document.querySelectorAll('.tgme_widget_message_wrap');
-      
-      debugPrint('🔍 Найдено Telegram сообщений: ${messageWraps.length}');
-
-      int newNewsCount = 0;
-
-      for (final element in messageWraps) {
-        try {
-          final news = _parseTelegramMessage(element);
-          if (news != null && !_loadedNewsUrls.contains(news.url)) {
-            loadedNews.add(news);
-            _loadedNewsUrls.add(news.url);
-            newNewsCount++;
-          }
-        } catch (e) {
-          debugPrint('❌ Ошибка парсинга Telegram сообщения: $e');
-        }
-      }
-
-      // 🔄 ИЗМЕНЕНИЕ 1: Сортируем загруженные новости по дате в обратном порядке (от новых к старым)
-      loadedNews.sort((a, b) {
-        try {
-          final dateA = _parseDateTimeFromString(a.date);
-          final dateB = _parseDateTimeFromString(b.date);
-          return dateB.compareTo(dateA); // Обратный порядок
-        } catch (e) {
-          return 0;
-        }
-      });
-
-      // Проверяем есть ли еще страницы
-      final nextPage = document.querySelector('.next.page-numbers, a.next');
-      final hasMore = nextPage != null;
-
-      setState(() {
-        if (isFirstLoad) {
-          _news = loadedNews;
-          _currentPage = 1;
-        } else {
-          if (newNewsCount > 0) {
-            // 🔄 ИЗМЕНЕНИЕ 2: Объединяем и пересортировываем все новости
-            final allNews = [..._news, ...loadedNews];
-            allNews.sort((a, b) {
-              try {
-                final dateA = _parseDateTimeFromString(a.date);
-                final dateB = _parseDateTimeFromString(b.date);
-                return dateB.compareTo(dateA); // Обратный порядок
-              } catch (e) {
-                return 0;
-              }
-            });
-            _news = allNews;
-            _currentPage++;
-          } else {
-            _hasMorePages = false;
-          }
-        }
-        _hasMorePages = hasMore;
-        _isLoading = false;
-        _isLoadingMore = false;
-      });
-      
-      debugPrint('✅ Загружено $newNewsCount новых новостей');
-      debugPrint('📄 Всего новостей: ${_news.length}');
-      debugPrint('➡️ Есть еще страницы: $_hasMorePages');
-      debugPrint('🔢 Текущая страница: $_currentPage');
-    } catch (e) {
-        debugPrint('❌ Ошибка парсинга HTML: $e');
-        setState(() {
-        _error = 'Ошибка обработки данных: $e';
-        _isLoading = false;
-        _isLoadingMore = false;
-      });
-    }
+  /// Returns the trimmed innerText of the first child element with [tag].
+  String? _text(xml.XmlElement parent, String tag) {
+    final el = parent.findElements(tag).firstOrNull;
+    return el?.innerText.trim();
   }
 
-  // 🔄 ИЗМЕНЕНИЕ 3: Функция для парсинга даты из строки
-  DateTime _parseDateTimeFromString(String dateString) {
+  /// Strips HTML tags for display in the list (title may contain <b> etc.).
+  String _stripHtml(String raw) {
+    return raw
+        .replaceAll(RegExp(r'<[^>]*>'), '')
+        .replaceAll('&amp;', '&')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&#39;', "'")
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+  }
+
+  /// Parses an RFC-822 date like "Wed, 14 Oct 2026 15:45:43 GMT".
+  DateTime _parseRfc822(String? raw) {
+    if (raw == null || raw.isEmpty) return DateTime.now();
     try {
-      // Пробуем разные форматы дат
-      final formats = [
-        'dd.MM.yyyy HH:mm',
-        'yyyy-MM-ddTHH:mm:ssZ',
-        'yyyy-MM-dd HH:mm:ss',
-      ];
-      
-      for (final format in formats) {
-        try {
-          if (format == 'dd.MM.yyyy HH:mm') {
-            final parts = dateString.split(' ');
-            final dateParts = parts[0].split('.');
-            final timeParts = parts[1].split(':');
-            return DateTime(
-              int.parse(dateParts[2]),
-              int.parse(dateParts[1]),
-              int.parse(dateParts[0]),
-              int.parse(timeParts[0]),
-              int.parse(timeParts[1]),
-            );
-          } else {
-            final dateTime = DateTime.parse(dateString);
-            return dateTime;
-          }
-        } catch (e) {
-          continue;
-        }
-      }
-      
-      // Если ни один формат не подошел, возвращаем текущую дату
-      return DateTime.now();
-    } catch (e) {
+      // Dart's DateTime.parse can't handle RFC-822, so we do it manually.
+      // Format: "Wed, 14 Oct 2026 15:45:43 GMT"
+      final parts = raw.split(' ');
+      if (parts.length < 5) return DateTime.now();
+
+      // parts[1] = day, parts[2] = month, parts[3] = year, parts[4] = time
+      final day = int.tryParse(parts[1]) ?? 1;
+      final month = _monthFromName(parts[2]);
+      final year = int.tryParse(parts[3]) ?? DateTime.now().year;
+
+      final timeParts = parts[4].split(':');
+      final hour = int.tryParse(timeParts[0]) ?? 0;
+      final minute = int.tryParse(timeParts[1]) ?? 0;
+      final second = int.tryParse(timeParts.length > 2 ? timeParts[2] : '0') ?? 0;
+
+      return DateTime.utc(year, month, day, hour, minute, second).toLocal();
+    } catch (_) {
       return DateTime.now();
     }
   }
 
-  News? _parseTelegramMessage(dom.Element element) {
-    try {
-      final messageElement = element.querySelector('.tgme_widget_message');
-      final dataPost = messageElement?.attributes['data-post'];
-      final messageId = dataPost?.split('/').last ?? '';
-
-      final textElement = element.querySelector('.tgme_widget_message_text');
-      if (textElement == null) return null;
-
-      // --- Полный HTML (сохраняет все теги и структуру) ---
-      final fullHtml = textElement.innerHtml;  // <-- вместо .text
-
-      // --- Извлекаем заголовок из первого <b> ---
-      String title = '';
-      final boldElement = textElement.querySelector('b');
-      if (boldElement != null) {
-        title = _cleanText(boldElement.text); // очищаем только для заголовка
-      }
-      if (title.isEmpty) {
-        // Если нет <b> – берём первую строку из текста
-        final firstLine = fullHtml.split(RegExp(r'<br\s*/?>|\n')).first;
-        final tmp = parser.parse(firstLine);
-        title = _cleanText(tmp.text ?? '');
-      }
-      if (title.isEmpty) title = 'Новость';
-
-      // --- URL ---
-      final urlElement = element.querySelector('.tgme_widget_message_date');
-      var url = urlElement?.attributes['href'];
-      if (url == null || url.isEmpty) {
-        url = '${AppStrings.telegramNewsBaseUrl}$messageId';
-      }
-
-      // --- Дата ---
-      final timeElement = element.querySelector('time');
-      var dateTime = timeElement?.attributes['datetime'];
-      if (dateTime == null || dateTime.isEmpty) {
-        dateTime = _getCurrentDate();
-      } else {
-        dateTime = _formatDateTime(dateTime);
-      }
-
-      // --- Изображение ---
-      String? imageUrl;
-      final photoWrap = element.querySelector('.tgme_widget_message_photo_wrap');
-      if (photoWrap != null) {
-        final style = photoWrap.attributes['style'];
-        if (style != null) {
-          final match = RegExp(r"background-image:url\('(.*?)'\)").firstMatch(style);
-          imageUrl = match?.group(1);
-        }
-      }
-
-      return News(
-        id: messageId.isNotEmpty ? messageId : url,
-        title: title,
-        date: _cleanText(dateTime),
-        imageUrl: imageUrl ?? '',
-        description: fullHtml,  // ← сохраняем HTML как есть
-        url: url,
-      );
-    } catch (e) {
-      debugPrint('❌ Ошибка парсинга Telegram сообщения: $e');
-      return null;
-    }
+  int _monthFromName(String name) {
+    const months = {
+      'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
+      'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12,
+    };
+    return months[name] ?? 1;
   }
 
-  String _formatDateTime(String isoDateTime) {
-    try {
-      final dateTime = DateTime.parse(isoDateTime);
-      return '${dateTime.day.toString().padLeft(2, '0')}.${dateTime.month.toString().padLeft(2, '0')}.${dateTime.year} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
-    } catch (e) {
-      return isoDateTime;
-    }
+  String _formatDate(DateTime dt) {
+    return '${dt.day.toString().padLeft(2, '0')}.'
+        '${dt.month.toString().padLeft(2, '0')}.'
+        '${dt.year} '
+        '${dt.hour.toString().padLeft(2, '0')}:'
+        '${dt.minute.toString().padLeft(2, '0')}';
   }
 
-  String _cleanText(String text) {
-    return text.replaceAll(RegExp(r'\s+'), ' ').trim();
-  }
-
-  String _getCurrentDate() {
-    final now = DateTime.now();
-    return '${now.day.toString().padLeft(2, '0')}.${now.month.toString().padLeft(2, '0')}.${now.year}';
-  }
-
+  // ==================== UI ====================
   Widget _buildErrorWidget() {
     return SingleChildScrollView(
       child: Center(
@@ -308,15 +210,18 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                _hasInternetError ? Icons.wifi_off : Icons.error_outline,
+              const Icon(
+                Icons.wifi_off,
                 size: 64,
                 color: AppColors.customGrey,
               ),
               const SizedBox(height: 16),
               Text(
                 _error,
-                style: const TextStyle(color: AppColors.customWhite, fontSize: 16),
+                style: const TextStyle(
+                  color: AppColors.customWhite,
+                  fontSize: 16,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 20),
@@ -338,48 +243,26 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
   Widget _buildEmptyWidget() {
     return const SingleChildScrollView(
       child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.article_outlined,
-              size: 64,
-              color: AppColors.customGrey,
-            ),
-            SizedBox(height: 16),
-            Text(
-              'Статьи не найдены',
-              style: TextStyle(color: AppColors.customGrey, fontSize: 16),
-            ),
-          ],
+        child: Padding(
+          padding: EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.article_outlined,
+                size: 64,
+                color: AppColors.customGrey,
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Новости не найдены',
+                style: TextStyle(color: AppColors.customGrey, fontSize: 16),
+              ),
+            ],
+          ),
         ),
       ),
     );
-  }
-
-  Widget _buildLoadMoreIndicator() {
-    if (!_hasMorePages) {
-      return const Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Center(
-          child: Text(
-            'Все статьи загружены',
-            style: TextStyle(color: AppColors.customGrey),
-          ),
-        ),
-      );
-    }
-    
-    return _isLoadingMore
-        ? const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
-              ),
-            ),
-          )
-        : const SizedBox.shrink();
   }
 
   @override
@@ -392,7 +275,8 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
         child: _isLoading
             ? const Center(
                 child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.customGreen),
+                  valueColor:
+                      AlwaysStoppedAnimation<Color>(AppColors.customGreen),
                 ),
               )
             : _error.isNotEmpty
@@ -402,14 +286,9 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
                     : ListView.builder(
                         controller: _scrollController,
                         padding: const EdgeInsets.symmetric(vertical: 8),
-                        itemCount: _news.length + 1,
+                        itemCount: _news.length,
                         itemBuilder: (ctx, index) {
-                          if (index == _news.length) {
-                            return _buildLoadMoreIndicator();
-                          }
-                          return NewsItem(
-                            news: _news[index],
-                          );
+                          return NewsItem(news: _news[index]);
                         },
                       ),
       ),

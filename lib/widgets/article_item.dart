@@ -7,9 +7,6 @@ import 'package:jrrplayerapp/ui/screens/articles_detail_screen.dart';
 
 class ArticleItem extends StatelessWidget {
   final Article article;
-
-  /// Optional: allows the caller to override the category shown.
-  /// If null, we'll try to fall back to a sensible default.
   final String? categoryLabel;
 
   const ArticleItem({
@@ -20,6 +17,8 @@ class ArticleItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final String category = categoryLabel ?? article.category ?? 'Статья';
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -41,25 +40,13 @@ class ArticleItem extends StatelessWidget {
 
                 const SizedBox(width: 12),
 
-                // ---- TEXT BLOCK ----
+                // ---- TEXT ----
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Category (teal, uppercase, small)
-                      Text(
-                        (categoryLabel ?? _inferCategory()).toUpperCase(),
-                        style: const TextStyle(
-                          color: AppColors.customStyle,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.8,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-
-                      // Title (white, bold)
+                      // Title (white, bold, up to 2 lines)
                       Text(
                         article.title,
                         style: const TextStyle(
@@ -72,7 +59,7 @@ class ArticleItem extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
 
-                      // Description (grey, up to 2 lines) – only if different from title
+                      // Description
                       if (article.description.isNotEmpty &&
                           article.description != article.title) ...[
                         const SizedBox(height: 6),
@@ -88,38 +75,38 @@ class ArticleItem extends StatelessWidget {
                         ),
                       ],
 
-                      // Date row (with clock icon for a "reading time" feel)
-                      if (article.date.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.access_time,
-                              size: 13,
+                      const SizedBox(height: 8),
+
+                      // Date + category badge row
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          // Date (left)
+                          Text(
+                            article.date,
+                            style: const TextStyle(
                               color: Color(0xFF6E7787),
+                              fontSize: 12,
                             ),
-                            const SizedBox(width: 4),
-                            Text(
-                              article.date,
-                              style: const TextStyle(
-                                color: Color(0xFF6E7787),
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                          ),
+
+                          const Spacer(),
+
+                          // Category badge (right)
+                          _buildCategoryBadge(category),
+                        ],
+                      ),
                     ],
                   ),
                 ),
 
-                const SizedBox(width: 8),
+                const SizedBox(width: 4),
 
-                // ---- CHEVRON ----
+                // Chevron
                 const Icon(
                   Icons.chevron_right,
                   color: Colors.white,
-                  size: 24,
+                  size: 22,
                 ),
               ],
             ),
@@ -141,8 +128,8 @@ class ArticleItem extends StatelessWidget {
             ? CachedNetworkImage(
                 imageUrl: article.imageUrl,
                 fit: BoxFit.cover,
-                placeholder: (context, url) => _placeholder(),
-                errorWidget: (context, url, error) => _placeholder(),
+                placeholder: (_, __) => _placeholder(),
+                errorWidget: (_, __, ___) => _placeholder(),
               )
             : _placeholder(),
       ),
@@ -162,14 +149,55 @@ class ArticleItem extends StatelessWidget {
     );
   }
 
-  // ==================== CATEGORY FALLBACK ====================
-  /// If you don't pass `categoryLabel`, we try to guess a sensible one.
-  /// Override this method (or always pass `categoryLabel`) if your `Article`
-  /// model has a real `category` field — then just return `article.category`.
-  String _inferCategory() {
-    // TODO: if Article has a 'category' or 'type' field, use it here:
-    // return article.category;
-    return 'Статья';
+  // ==================== CATEGORY BADGE ====================
+  /// Small teal badge with an icon and the category name in caps.
+  Widget _buildCategoryBadge(String category) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          _iconForCategory(category),
+          color: AppColors.customStyle,
+          size: 14,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          category.toUpperCase(),
+          style: const TextStyle(
+            color: AppColors.customStyle,
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.6,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Picks a Material icon based on the category name.
+  /// Falls back to a generic article icon if the category is unknown.
+  IconData _iconForCategory(String category) {
+    final c = category.toLowerCase();
+
+    if (c.contains('история')) return Icons.account_balance;
+    if (c.contains('перевод')) return Icons.headphones;
+    if (c.contains('между делом')) return Icons.menu_book;
+    if (c.contains('музыкальн') && c.contains('новост')) {
+      return Icons.article_outlined;
+    }
+    if (c.contains('новост')) return Icons.article_outlined;
+    if (c.contains('всё просто') || c.contains('все просто')) {
+      return Icons.lightbulb_outline;
+    }
+    if (c.contains('вопрос')) return Icons.help_outline;
+    if (c.contains('видео')) return Icons.play_circle_outline;
+    if (c.contains('станц')) return Icons.radio;
+    if (c.contains('программ')) return Icons.mic_none;
+    if (c.contains('статья') || c.contains('статьи')) {
+      return Icons.article_outlined;
+    }
+
+    return Icons.label_outline;
   }
 
   // ==================== NAVIGATION ====================

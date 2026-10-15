@@ -1,14 +1,16 @@
 // lib/ui/screens/articles_feed_screen.dart
 
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:html/parser.dart' as parser;
 import 'package:html/dom.dart' as dom;
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
-
 import 'package:jrrplayerapp/models/article.dart';
 import 'package:jrrplayerapp/widgets/article_item.dart';
 import 'package:jrrplayerapp/constants/strings.dart';
+import 'package:jrrplayerapp/ui/screens/articles_detail_screen.dart';
 
 class ArticlesFeedScreen extends StatefulWidget {
   const ArticlesFeedScreen({super.key});
@@ -27,15 +29,24 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
   final ScrollController _scrollController = ScrollController();
   final Set<String> _loadedUrls = {};
 
+  // Featured carousel
+  late final PageController _featuredController;
+  Timer? _autoScrollTimer;
+  int _featuredIndex = 0;
+  static const int _featuredCount = 3;
+
   @override
   void initState() {
     super.initState();
+    _featuredController = PageController(viewportFraction: 0.92);
     _loadArticles();
     _scrollController.addListener(_scrollListener);
   }
 
   @override
   void dispose() {
+    _autoScrollTimer?.cancel();
+    _featuredController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -49,6 +60,23 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
     }
   }
 
+  // ==================== AUTO SCROLL ====================
+  void _startAutoScroll() {
+    _autoScrollTimer?.cancel();
+    _autoScrollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!mounted || !_featuredController.hasClients) return;
+      final int total = _featuredCount.clamp(0, _articles.length);
+      if (total <= 1) return;
+      final int next = (_featuredIndex + 1) % total;
+      _featuredController.animateToPage(
+        next,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
+  // ==================== LOADING ====================
   Future<void> _loadArticles() async {
     setState(() {
       _isLoading = true;
@@ -56,19 +84,18 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
       _currentPage = 1;
       _articles.clear();
       _loadedUrls.clear();
+      _featuredIndex = 0;
     });
+    _autoScrollTimer?.cancel();
 
     try {
-      // jrock.ru uses /feed for page 1, /feed/p2, /feed/p3... for pagination
-      const base = AppStrings.articlesFeedUrl; // e.g. https://jrock.ru/feed
-      final url = kIsWeb
-          ? AppStrings.proxyUrl('$base/')
-          : '$base/';
-
+      const base = AppStrings.articlesFeedUrl;
+      final url = kIsWeb ? AppStrings.proxyUrl('$base/') : '$base/';
       final response = await AppStrings.getWithProxy(url);
 
       if (response.statusCode == 200) {
         _parseHtml(response.body, isFirstLoad: true);
+        _startAutoScroll();
       } else {
         throw Exception('Ошибка сервера: ${response.statusCode}');
       }
@@ -86,12 +113,10 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
 
     try {
       final nextPage = _currentPage + 1;
-      // jrock.ru pagination: /feed/p2, /feed/p3, ...
       const base = AppStrings.articlesFeedUrl;
       final url = kIsWeb
           ? AppStrings.proxyUrl('$base/p$nextPage')
           : '$base/p$nextPage';
-
       final response = await AppStrings.getWithProxy(url);
 
       if (response.statusCode == 200) {
@@ -99,48 +124,33 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
       } else {
         _hasMorePages = false;
       }
-    } catch (e) {
+    } catch (_) {
       _hasMorePages = false;
     } finally {
-      if (mounted) {
-        setState(() => _isLoadingMore = false);
-      }
+      if (mounted) setState(() => _isLoadingMore = false);
     }
   }
 
   // ==================== PARSER ====================
-  // Supports BOTH structures:
-  //   - OLD jrock.pro: .qt-part-archive-item with h3.qt-title
-  //   - NEW jrock.ru:  a.row with <b>title</b>, <span>description</span>,
-  //                    .rdate date, .rkind badge, and <img>
   void _parseHtml(String html, {required bool isFirstLoad}) {
     final document = parser.parse(html);
-
-    // Try new jrock.ru structure first
     var items = document.querySelectorAll('a.row');
     bool isNewStructure = items.isNotEmpty;
-
-    // Fallback to old jrock.pro structure
     if (items.isEmpty) {
       items = document.querySelectorAll('.qt-part-archive-item');
       isNewStructure = false;
     }
 
     final List<Article> newArticles = [];
-
     for (final el in items) {
-      final article = isNewStructure
-          ? _parseArticleNew(el)
-          : _parseArticleOld(el);
+      final article =
+          isNewStructure ? _parseArticleNew(el) : _parseArticleOld(el);
       if (article != null && !_loadedUrls.contains(article.url)) {
         newArticles.add(article);
         _loadedUrls.add(article.url);
       }
     }
 
-    // Detect "next page" link for pagination
-    // jrock.ru: <a href=".../feed/p2">→</a> or rel="next"
-    // jrock.pro: <a class="next page-numbers">
     final hasNext = document.querySelector('a[rel="next"]') != null ||
         document.querySelector('.next.page-numbers') != null ||
         document.querySelector('nav.pager a[href*="/p"]') != null;
@@ -158,19 +168,15 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
     });
   }
 
-  // ---------- NEW structure (jrock.ru) ----------
   Article? _parseArticleNew(dom.Element row) {
     try {
       final href = row.attributes['href'];
       if (href == null || href.isEmpty) return null;
 
-      // Title is inside <b> inside .rbody
       final titleEl = row.querySelector('.rbody b');
       final title = titleEl?.text.trim();
       if (title == null || title.isEmpty) return null;
 
-      // Description is the <span> sibling inside .rbody (first span that
-      // isn't inside another nested element)
       String description = '';
       final bodyEl = row.querySelector('.rbody');
       if (bodyEl != null) {
@@ -182,15 +188,12 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
         }
       }
 
-      // Date from .rdate
       final dateEl = row.querySelector('.rdate');
       final date = dateEl?.text.trim() ?? _getCurrentDate();
 
-      // Category from .rkind .badge-kind (e.g. "Трудности перевода")
       final kindEl = row.querySelector('.rkind .badge-kind');
       final category = kindEl?.text.trim() ?? '';
 
-      // Image: first <img> in the row
       final img = row.querySelector('img');
       String? imageUrl = img?.attributes['src'];
       if (imageUrl != null && imageUrl.isNotEmpty) {
@@ -208,20 +211,19 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
         imageUrl: finalImageUrl,
         description: description,
         url: _normalizeUrl(href),
+        category: category.isEmpty ? 'Статья' : category,
       );
     } catch (e) {
-      debugPrint('Ошибка парсинга статьи (новая структура): $e');
+      debugPrint('Ошибка парсинга (новая структура): $e');
       return null;
     }
   }
 
-  // ---------- OLD structure (jrock.pro) ----------
   Article? _parseArticleOld(dom.Element element) {
     try {
       final link = element.querySelector('h3.qt-title a');
       final title = link?.text.trim();
       final url = link?.attributes['href'];
-
       if (title == null || url == null || title.isEmpty || url.isEmpty) {
         return null;
       }
@@ -229,7 +231,6 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
       final dateEl = element.querySelector('.qt-date');
       final date = dateEl?.text.trim() ?? _getCurrentDate();
 
-      // Image lookup — same as before
       String? imageUrl;
       final img = element.querySelector('img[data-lazy-src]');
       imageUrl = img?.attributes['data-lazy-src'];
@@ -240,7 +241,6 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
         final bg = element.querySelector('.qt-header-bg');
         imageUrl = bg?.attributes['data-bgimage'];
       }
-
       if (imageUrl != null && imageUrl.isNotEmpty) {
         imageUrl = _normalizeUrl(imageUrl);
       }
@@ -256,36 +256,23 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
         imageUrl: finalImageUrl,
         description: title,
         url: _normalizeUrl(url),
+        category: 'Статья',
       );
     } catch (e) {
-      debugPrint('Ошибка парсинга статьи (старая структура): $e');
+      debugPrint('Ошибка парсинга (старая структура): $e');
       return null;
     }
   }
 
-  // ==================== HELPERS ====================
-
-  /// Makes an image/href URL absolute and strips quotes.
   String _normalizeUrl(String raw) {
     var u = raw.trim();
-
-    // strip surrounding quotes
     if ((u.startsWith('"') && u.endsWith('"')) ||
         (u.startsWith("'") && u.endsWith("'"))) {
       u = u.substring(1, u.length - 1);
     }
-
     if (u.startsWith('//')) return 'https:$u';
-
-    if (u.startsWith('/')) {
-      // Relative — resolve against jrock.ru (the current feed)
-      return 'https://jrock.ru$u';
-    }
-
-    if (!u.startsWith('http')) {
-      return 'https://jrock.ru/$u';
-    }
-
+    if (u.startsWith('/')) return 'https://jrock.ru$u';
+    if (!u.startsWith('http')) return 'https://jrock.ru/$u';
     return u;
   }
 
@@ -302,7 +289,155 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
     return months[m];
   }
 
-  // ==================== UI ====================
+  // ==================== BUILD ====================
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) return _buildLoader();
+    if (_error.isNotEmpty) return _buildError();
+    if (_articles.isEmpty) {
+      return const Center(
+        child: Text('Пусто', style: TextStyle(color: AppColors.customGrey)),
+      );
+    }
+
+    final featured = _articles.take(_featuredCount).toList();
+    final rest = _articles.skip(_featuredCount).toList();
+
+    return RefreshIndicator(
+      onRefresh: _loadArticles,
+      color: AppColors.customGreen,
+      child: ListView(
+        controller: _scrollController,
+        padding: const EdgeInsets.only(bottom: 8),
+        children: [
+          const SizedBox(height: 8),
+
+          // ---------- FEATURED PAGEVIEW ----------
+          SizedBox(
+            height: 340,
+            child: PageView.builder(
+              controller: _featuredController,
+              itemCount: featured.length,
+              onPageChanged: (i) => setState(() => _featuredIndex = i),
+              itemBuilder: (context, i) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: _FeaturedArticleCard(article: featured[i]),
+                );
+              },
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // ---------- DOT INDICATORS ----------
+          _buildDots(featured.length),
+
+          const SizedBox(height: 20),
+
+          // ---------- "НОВЫЕ МАТЕРИАЛЫ" HEADER ----------
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'НОВЫЕ МАТЕРИАЛЫ',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => AllArticlesScreen(articles: _articles),
+                      ),
+                    );
+                  },
+                  child: const Row(
+                    children: [
+                      Text(
+                        'Все материалы',
+                        style: TextStyle(
+                          color: AppColors.customStyle,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      SizedBox(width: 4),
+                      Icon(
+                        Icons.chevron_right,
+                        color: AppColors.customStyle,
+                        size: 18,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          // ---------- REST OF THE LIST ----------
+          ...rest.map((a) => ArticleItem(article: a)),
+
+          if (_hasMorePages)
+            _isLoadingMore
+                ? const Padding(
+                    padding: EdgeInsets.all(20),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: AppColors.customGreen,
+                      ),
+                    ),
+                  )
+                : const SizedBox(height: 20)
+          else
+            const Padding(
+              padding: EdgeInsets.all(20),
+              child: Center(
+                child: Text(
+                  'Больше нет',
+                  style: TextStyle(color: AppColors.customWhiteTransp),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDots(int count) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(count, (i) {
+        final bool active = i == _featuredIndex;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          width: active ? 10 : 8,
+          height: active ? 10 : 8,
+          decoration: BoxDecoration(
+            color: active ? AppColors.customStyle : const Color(0xFF3A4553),
+            shape: BoxShape.circle,
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _buildLoader() {
+    return const Center(
+      child: CircularProgressIndicator(color: AppColors.customGreen),
+    );
+  }
 
   Widget _buildError() {
     return Center(
@@ -334,65 +469,200 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
       ),
     );
   }
+}
 
-  Widget _buildLoader() {
-    return const Center(
-      child: CircularProgressIndicator(color: AppColors.customGreen),
+
+// ==================== FEATURED CARD ====================
+class _FeaturedArticleCard extends StatelessWidget {
+  final Article article;
+  const _FeaturedArticleCard({required this.article});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ArticleDetailScreen(articleUrl: article.url),
+          ),
+        );
+      },
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Background image
+            CachedNetworkImage(
+              imageUrl: article.imageUrl,
+              fit: BoxFit.cover,
+              placeholder: (_, __) => Container(color: const Color(0xFF232A36)),
+              errorWidget: (_, __, ___) =>
+                  Container(color: const Color(0xFF232A36)),
+            ),
+
+            // Dark gradient overlay (bottom → transparent)
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [
+                    Color(0xE6000000),
+                    Color(0x99000000),
+                    Color(0x00000000),
+                  ],
+                  stops: [0.0, 0.45, 1.0],
+                ),
+              ),
+            ),
+
+            // Bookmark icon (top-right)
+            Positioned(
+              top: 12,
+              right: 12,
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.4),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.bookmark_border,
+                  color: Colors.white,
+                  size: 22,
+                ),
+              ),
+            ),
+
+            // Text block (bottom)
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 16,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Category
+                  Text(
+                    (article.category ?? 'Статья').toUpperCase(),
+                    style: const TextStyle(
+                      color: AppColors.customStyle,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+
+                  // Title
+                  Text(
+                    article.title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      height: 1.2,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Description
+                  if (article.description.isNotEmpty)
+                    Text(
+                      article.description,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                        height: 1.35,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  const SizedBox(height: 12),
+
+                  // Date + "Читать далее →"
+                  Row(
+                    children: [
+                      Text(
+                        article.date,
+                        style: const TextStyle(
+                          color: Colors.white60,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const Spacer(),
+                      const Row(
+                        children: [
+                          Text(
+                            'Читать далее',
+                            style: TextStyle(
+                              color: AppColors.customStyle,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          SizedBox(width: 4),
+                          Icon(
+                            Icons.arrow_forward,
+                            color: AppColors.customStyle,
+                            size: 16,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
-
-  Widget _buildLoadMore() {
-    if (!_hasMorePages) {
-      return const Padding(
-        padding: EdgeInsets.all(20),
-        child: Center(
-          child: Text(
-            'Больше нет',
-            style: TextStyle(color: AppColors.customWhiteTransp),
-          ),
-        ),
-      );
-    }
-    return _isLoadingMore
-        ? const Padding(
-            padding: EdgeInsets.all(20),
-            child: Center(
-              child: CircularProgressIndicator(color: AppColors.customGreen),
-            ),
-          )
-        : const SizedBox.shrink();
-  }
+}
+// ==================== ALL ARTICLES SCREEN ====================
+class AllArticlesScreen extends StatelessWidget {
+  final List<Article> articles;
+  const AllArticlesScreen({super.key, required this.articles});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.customBlack,
-      body: RefreshIndicator(
-        onRefresh: _loadArticles,
-        color: AppColors.customGreen,
-        child: _isLoading
-            ? _buildLoader()
-            : _error.isNotEmpty
-                ? _buildError()
-                : _articles.isEmpty
-                    ? const Center(
-                        child: Text(
-                          'Пусто',
-                          style: TextStyle(color: AppColors.customGrey),
-                        ),
-                      )
-                    : ListView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        itemCount: _articles.length + 1,
-                        itemBuilder: (context, index) {
-                          if (index == _articles.length) {
-                            return _buildLoadMore();
-                          }
-                          return ArticleItem(article: _articles[index]);
-                        },
-                      ),
+      backgroundColor: AppColors.customBackgr,
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF0F141E),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+        title: const Text(
+          'Все материалы',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.5,
+          ),
+        ),
       ),
+      body: articles.isEmpty
+          ? const Center(
+              child: Text(
+                'Пока ничего нет',
+                style: TextStyle(color: AppColors.customGrey),
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: articles.length,
+              itemBuilder: (context, i) =>
+                  ArticleItem(article: articles[i]),
+            ),
     );
   }
 }

@@ -441,74 +441,77 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                     SizedBox(width: mediumSpacing),
 
                     // ---- TRACK INFO ----
-                    ConstrainedBox(
-                      constraints: BoxConstraints(
-                        // Ограничиваем ширину блока с текстом, чтобы он не растягивался бесконечно
-                        // и не ломал центрирование
-                        maxWidth: MediaQuery.of(context).size.width * 0.55,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // "СЕЙЧАС В ЭФИРЕ"
-                          Row(
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        return ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: constraints.maxWidth * 0.75,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
-                                Icons.bar_chart,
-                                color: AppColors.customStyle,
-                                size: 16,
+                              // "СЕЙЧАС В ЭФИРЕ"
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.bar_chart,
+                                    color: AppColors.customStyle,
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'СЕЙЧАС В ЭФИРЕ',
+                                    style: TextStyle(
+                                      color: AppColors.customStyle.withValues(alpha: 0.85),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 1,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 6),
-                              Text(
-                                'СЕЙЧАС В ЭФИРЕ',
-                                style: TextStyle(
-                                  color: AppColors.customStyle.withValues(alpha: 0.85),
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 1,
-                                ),
+                              const SizedBox(height: 8),
+
+                              // Track title
+                              ValueListenableBuilder<AudioMetadata?>(
+                                valueListenable: _metadataNotifier,
+                                builder: (_, metadata, __) {
+                                  final title = metadata?.title ?? 'Радио J-Rock';
+                                  return Text(
+                                    title,
+                                    style: TextStyle(
+                                      fontSize: isCompact ? 16 : 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.customWhite,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  );
+                                },
+                              ),
+                              const SizedBox(height: 4),
+
+                              // Artist
+                              ValueListenableBuilder<AudioMetadata?>(
+                                valueListenable: _metadataNotifier,
+                                builder: (_, metadata, __) {
+                                  return Text(
+                                    metadata?.artist ?? 'Онлайн радио',
+                                    style: TextStyle(
+                                      fontSize: isCompact ? 13 : 14,
+                                      color: AppColors.customWhite.withValues(alpha: 0.6),
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  );
+                                },
                               ),
                             ],
-                          ),
-                          const SizedBox(height: 8),
 
-                          // Track title
-                          ValueListenableBuilder<AudioMetadata?>(
-                            valueListenable: _metadataNotifier,
-                            builder: (_, metadata, __) {
-                              final title = metadata?.title ?? 'Радио J-Rock';
-                              return Text(
-                                title,
-                                style: TextStyle(
-                                  fontSize: isCompact ? 16 : 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.customWhite,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              );
-                            },
                           ),
-                          const SizedBox(height: 4),
-
-                          // Artist
-                          ValueListenableBuilder<AudioMetadata?>(
-                            valueListenable: _metadataNotifier,
-                            builder: (_, metadata, __) {
-                              return Text(
-                                metadata?.artist ?? 'Онлайн радио',
-                                style: TextStyle(
-                                  fontSize: isCompact ? 13 : 14,
-                                  color: AppColors.customWhite.withValues(alpha: 0.6),
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              );
-                            },
-                          ),
-                        ],
-                      ),
+                        );
+                      },
                     ),
                   ],
                 ),

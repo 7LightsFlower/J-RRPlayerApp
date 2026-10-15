@@ -26,7 +26,6 @@ class _EnlargedTabsScreenState extends State<EnlargedTabsScreen>
       vsync: this,
       initialIndex: widget.initialIndex,
     );
-    // Rebuild when the tab changes (swipe or tap) so the bottom nav updates.
     _tabController.addListener(() {
       if (mounted) setState(() {});
     });
@@ -38,18 +37,28 @@ class _EnlargedTabsScreenState extends State<EnlargedTabsScreen>
     super.dispose();
   }
 
+  /// Returns the correct tab body wrapped so it can live either under a
+  /// bottom bar (portrait) or beside a left rail (landscape).
+  Widget _buildTabContent() {
+    return TabBarView(
+      controller: _tabController,
+      children: const [
+        ArticlesFeedScreen(),
+        NewsFeedScreen(),
+        PodcastListScreen(),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.customBackgr,
       appBar: AppBar(
-        // Dark background matching the bottom navigation
         backgroundColor: const Color(0xFF0F141E),
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-
-        // App title styling
         title: const Text(
           AppStrings.appName,
           style: TextStyle(
@@ -59,8 +68,6 @@ class _EnlargedTabsScreenState extends State<EnlargedTabsScreen>
             letterSpacing: 0.5,
           ),
         ),
-
-        // Tabs styling
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: AppColors.customStyle,
@@ -86,25 +93,34 @@ class _EnlargedTabsScreenState extends State<EnlargedTabsScreen>
           ],
         ),
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: const [
-                ArticlesFeedScreen(),
-                NewsFeedScreen(),
-                PodcastListScreen(),
-              ],
-            ),
-          ),
-          AppBottomNav(
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final Size screen = MediaQuery.of(context).size;
+          final bool isWide = screen.width > screen.height;
+
+          final nav = AppBottomNav(
             currentIndex: _tabController.index,
-            onTap: (index) {
-              _tabController.animateTo(index);
-            },
-          ),
-        ],
+            onTap: (index) => _tabController.animateTo(index),
+          );
+
+          if (isWide) {
+            // Landscape → rail on the left, content on the right.
+            return Row(
+              children: [
+                Expanded(child: _buildTabContent()),
+                nav,
+              ],
+            );
+          }
+
+          // Portrait → bar at the bottom.
+          return Column(
+            children: [
+              Expanded(child: _buildTabContent()),
+              nav,
+            ],
+          );
+        },
       ),
     );
   }

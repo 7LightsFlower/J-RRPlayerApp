@@ -76,32 +76,69 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       backgroundColor: AppColors.customBackgr,
       drawer: _buildAppDrawer(),
       body: SafeArea(
-        child: Column(
-          children: [
-            _buildCustomAppBar(),
-            Expanded(
-              child: OrientationBuilder(
-                builder: (context, orientation) {
-                  if (orientation == Orientation.landscape) {
-                    return _buildLandscapeLayout();
-                  }
-                  return _buildPortraitLayout();
-                },
-              ),
-            ),
-            AppBottomNav(
-              currentIndex: _currentNavIndex,
-              onTap: (index) {
-                setState(() => _currentNavIndex = index);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => EnlargedTabsScreen(initialIndex: index),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final Size screen = MediaQuery.of(context).size;
+            final bool isWide = screen.width > screen.height;
+
+            if (isWide) {
+              // Landscape → Row: rail слева, контент справа
+              return Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      children: [
+                        _buildCustomAppBar(),
+                        Expanded(
+                          child: OrientationBuilder(
+                            builder: (context, orientation) =>
+                                _buildLandscapeLayout(),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                );
-              },
-            ),
-          ],
+                  AppBottomNav(
+                    currentIndex: _currentNavIndex,
+                    onTap: (index) {
+                      setState(() => _currentNavIndex = index);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => EnlargedTabsScreen(initialIndex: index),
+                        ),
+                      );
+                    },
+                  ),
+
+                ],
+              );
+            }
+
+            // Portrait → Column: всё как было, nav внизу
+            return Column(
+              children: [
+                _buildCustomAppBar(),
+                Expanded(
+                  child: OrientationBuilder(
+                    builder: (context, orientation) => _buildPortraitLayout(),
+                  ),
+                ),
+                AppBottomNav(
+                  currentIndex: _currentNavIndex,
+                  onTap: (index) {
+                    setState(() => _currentNavIndex = index);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => EnlargedTabsScreen(initialIndex: index),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -144,19 +181,30 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              // LEFT: logo + live indicator, wrapped in scroll so it never overflows
               SizedBox(
                 width: leftWidth,
                 height: availableHeight,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    RadioButtonWithWaves(screenWidth: availableWidth),
-                    const SizedBox(height: 12),
-                    _buildLiveIndicator(),
-                  ],
+                child: SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: availableHeight,
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        RadioButtonWithWaves(screenWidth: leftWidth),
+                        const SizedBox(height: 12),
+                        _buildLiveIndicator(),
+                      ],
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 16),
+              // RIGHT: audio player, always scrollable + bounded
               const Expanded(
                 child: SingleChildScrollView(
                   physics: BouncingScrollPhysics(),
@@ -169,7 +217,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       },
     );
   }
-
   // ==================== APP BAR ====================
   Widget _buildCustomAppBar() {
     return Padding(
