@@ -216,19 +216,19 @@ class _GlowingIconButtonState extends State<_GlowingIconButton>
             shape: BoxShape.circle,
             boxShadow: widget.showGlow
                 ? [
-                    // Внутреннее яркое свечение
+                    // Мягкое внешнее гало (без spreadRadius, чтобы не заходило под иконку)
                     BoxShadow(
                       color: AppColors.customStyle
-                          .withValues(alpha: 0.35 + 0.35 * t),
-                      blurRadius: 18 + 22 * t,
-                      spreadRadius: 2 + 5 * t,
+                          .withValues(alpha: 0.15 + 0.15 * t),
+                      blurRadius: 28 + 20 * t,
+                      spreadRadius: 0,
                     ),
-                    // Внешнее мягкое гало
+                    // Более широкое и совсем слабое свечение по краям
                     BoxShadow(
                       color: AppColors.customStyle
-                          .withValues(alpha: 0.12 + 0.15 * t),
-                      blurRadius: 38 + 22 * t,
-                      spreadRadius: 3 + 4 * t,
+                          .withValues(alpha: 0.05 + 0.08 * t),
+                      blurRadius: 55 + 25 * t,
+                      spreadRadius: 0,
                     ),
                   ]
                 : null,
