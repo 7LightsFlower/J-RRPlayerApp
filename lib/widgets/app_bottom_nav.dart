@@ -32,7 +32,7 @@ class AppBottomNav extends StatelessWidget {
 
   // ==================== BOTTOM BAR (portrait) ====================
   Widget _buildBottomBar(BuildContext context, double width) {
-    final double iconSize = (width * 0.065).clamp(20.0, 28.0);
+    final double iconSize = (width * 0.065).clamp(26.0, 30.0);
     final double labelSize = (width * 0.028).clamp(9.0, 12.0);
     final double verticalPadding = (width * 0.03).clamp(8.0, 14.0);
 

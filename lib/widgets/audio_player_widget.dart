@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
+import 'package:jrrplayerapp/constants/app_text_styles.dart';
 import 'package:jrrplayerapp/services/audio_player_service.dart';
 import 'package:provider/provider.dart';
 
@@ -448,7 +449,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                               style: TextStyle(
                                 color: AppColors.customStyle
                                     .withValues(alpha: 0.85),
-                                fontSize: 10,
+                                fontSize: AppFontSizes.small,
                                 fontWeight: FontWeight.w600,
                                 letterSpacing: 1,
                               ),
@@ -466,7 +467,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                             return Text(
                               title,
                               style: TextStyle(
-                                fontSize: isCompact ? 16 : 18,
+                                fontSize: isCompact ? AppFontSizes.compactLarge : AppFontSizes.large,
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.customWhite,
                               ),
@@ -484,7 +485,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                             return Text(
                               metadata?.artist ?? 'Онлайн радио',
                               style: TextStyle(
-                                fontSize: isCompact ? 13 : 14,
+                                fontSize: isCompact ? AppFontSizes.medium : AppFontSizes.compactLarge,
                                 color: AppColors.customWhite
                                     .withValues(alpha: 0.6),
                               ),
