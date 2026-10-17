@@ -84,6 +84,15 @@ class RadioButtonWithWaves extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
+          // ============ ПУНКТИРНАЯ ОКРУЖНОСТЬ ============
+          IgnorePointer(
+            child: _RotatingDashedCircle(
+              size: buttonSize * 1.15, // Немного больше самой кнопки
+              color: hasConnection ? AppColors.customStyle : AppColors.customRed,
+              isPlaying: isPlaying,
+            ),
+          ),
+
           // ============ ВОЛНЫ ============
           if (!isBuffering)
             ..._buildWaveLayers(buttonSize, isPlaying, hasConnection)
@@ -142,6 +151,104 @@ class RadioButtonWithWaves extends StatelessWidget {
 
   Color _getWaveColor(bool hasConnection) =>
       hasConnection ? AppColors.customGreen : AppColors.customRed;
+}
+
+// =============================================================
+// ВРАЩАЮЩАЯСЯ ПУНКТИРНАЯ ОКРУЖНОСТЬ
+// =============================================================
+class _RotatingDashedCircle extends StatefulWidget {
+  final double size;
+  final Color color;
+  final bool isPlaying;
+
+  const _RotatingDashedCircle({
+    required this.size,
+    required this.color,
+    required this.isPlaying,
+  });
+
+  @override
+  State<_RotatingDashedCircle> createState() => _RotatingDashedCircleState();
+}
+
+class _RotatingDashedCircleState extends State<_RotatingDashedCircle>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 15), // Скорость вращения
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Transform.rotate(
+          angle: _controller.value * 2 * pi,
+          child: CustomPaint(
+            size: Size(widget.size, widget.size),
+            painter: _DashedCirclePainter(
+              color: widget.color,
+              // Немного приглушаем яркость, если не играет
+              opacity: widget.isPlaying ? 0.8 : 0.4, 
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _DashedCirclePainter extends CustomPainter {
+  final Color color;
+  final double opacity;
+
+  _DashedCirclePainter({required this.color, required this.opacity});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = color.withValues(alpha: opacity)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..strokeCap = StrokeCap.round;
+
+    final double radius = (size.width / 2) - 2;
+    final Offset center = Offset(size.width / 2, size.height / 2);
+    
+    // Параметры пунктира
+    const int dashCount = 36; // Количество штрихов
+    const double dashAngle = (2 * pi) / dashCount;
+    const double dashSweep = dashAngle * 0.5; // 50% штрих, 50% пробел
+
+    for (int i = 0; i < dashCount; i++) {
+      final double startAngle = i * dashAngle;
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        startAngle,
+        dashSweep,
+        false,
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedCirclePainter oldDelegate) {
+    return oldDelegate.color != color || oldDelegate.opacity != opacity;
+  }
 }
 
 // =============================================================
@@ -216,14 +323,12 @@ class _GlowingIconButtonState extends State<_GlowingIconButton>
             shape: BoxShape.circle,
             boxShadow: widget.showGlow
                 ? [
-                    // Мягкое внешнее гало (без spreadRadius, чтобы не заходило под иконку)
                     BoxShadow(
                       color: AppColors.customStyle
                           .withValues(alpha: 0.15 + 0.15 * t),
                       blurRadius: 28 + 20 * t,
                       spreadRadius: 0,
                     ),
-                    // Более широкое и совсем слабое свечение по краям
                     BoxShadow(
                       color: AppColors.customStyle
                           .withValues(alpha: 0.05 + 0.08 * t),
@@ -271,7 +376,6 @@ class _GlowingIconButtonState extends State<_GlowingIconButton>
 }
 
 // =============================================================
-
 // АНИМИРОВАННАЯ ВОЛНА
 // =============================================================
 class _AnimatedWave extends StatefulWidget {
@@ -307,10 +411,6 @@ class _AnimatedWaveState extends State<_AnimatedWave>
       vsync: this,
     )..repeat(reverse: false);
 
-    // Сдвигаем старт анимации в зависимости от widget.delay.
-    // delay = 0    → старт сразу (begin = 0.0)
-    // delay = 500  → старт через 500 мс из 2000 (begin = 0.25)
-    // delay = 1000 → старт через 1000 мс из 2000 (begin = 0.5)
     final double begin = (widget.delay / 2000).clamp(0.0, 1.0);
 
     _animation = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -332,7 +432,6 @@ class _AnimatedWaveState extends State<_AnimatedWave>
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, child) {
-        // Волна видна только когда играет; иначе — alpha = 0.
         final double visible = widget.isPlaying ? 1.0 : 0.0;
         final double opacityValue = (0.7 - (_animation.value * 0.6)) * visible;
         final int alpha = (opacityValue * 255).round();
