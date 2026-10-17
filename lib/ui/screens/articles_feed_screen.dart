@@ -310,7 +310,7 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
 
           // ---------- FEATURED PAGEVIEW ----------
           SizedBox(
-            height: 340,
+            height: (MediaQuery.of(context).size.height * 0.38).clamp(200.0, 340.0),
             child: PageView.builder(
               controller: _featuredController,
               itemCount: featured.length,
@@ -324,11 +324,11 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
             ),
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
 
           _buildDots(featured.length),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
 
           // ---------- "НОВЫЕ МАТЕРИАЛЫ" HEADER ----------
           Padding(
@@ -365,7 +365,7 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
             ),
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
 
           // ---------- REST OF THE LIST ----------
           ...rest.map((a) => ArticleItem(article: a)),

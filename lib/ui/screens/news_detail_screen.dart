@@ -19,7 +19,9 @@ class NewsDetailScreen extends StatelessWidget {
         elevation: 0,
         title: Text(
           news.title,
-          style: AppTextStyles.appBarTitle,
+          style: AppTextStyles.appBarTitle.copyWith(
+            fontWeight: FontWeight.w400,   // ← AppBar без жирного
+          ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
@@ -44,7 +46,7 @@ class NewsDetailScreen extends StatelessWidget {
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => Container(
                     height: 200,
-                    color: const Color(0xFF232A36),
+                    color: AppColors.surfaceMuted,
                     child: const Center(
                       child: Icon(
                         Icons.image_not_supported_outlined,
@@ -57,10 +59,10 @@ class NewsDetailScreen extends StatelessWidget {
                     if (progress == null) return child;
                     return Container(
                       height: 200,
-                      color: const Color(0xFF232A36),
+                      color: AppColors.surfaceMuted,
                       child: const Center(
                         child: CircularProgressIndicator(
-                          color: AppColors.customGreen,
+                          color: AppColors.customStyle,
                           strokeWidth: 2,
                         ),
                       ),
@@ -72,7 +74,17 @@ class NewsDetailScreen extends StatelessWidget {
             ],
             DefaultTextStyle(
               style: AppTextStyles.medium.copyWith(height: 1.5),
-              child: Html(data: news.description),
+              child: Html(
+                data: news.description,
+                style: {
+                  "b": Style(fontWeight: FontWeight.w400),
+                  "strong": Style(fontWeight: FontWeight.w400),
+                  "h1": Style(fontWeight: FontWeight.w400),
+                  "h2": Style(fontWeight: FontWeight.w400),
+                  "h3": Style(fontWeight: FontWeight.w400),
+                  "h4": Style(fontWeight: FontWeight.w400),
+                },
+              ),
             ),
           ],
         ),

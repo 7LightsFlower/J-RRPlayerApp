@@ -192,7 +192,9 @@ class _PodcastItemState extends State<PodcastItem> {
   /// line in white. The '|' itself is hidden.
   /// Falls back to plain white (single line) if there's no '|'.
   Widget _buildHighlightedTitle(String title) {
-    const TextStyle baseStyle = AppTextStyles.podcastTitle;
+    final TextStyle baseStyle = AppTextStyles.podcastTitle.copyWith(
+      height: 1.5,   // ← больше вертикального расстояния между строками
+    );
 
     final int barIndex = title.indexOf('|');
 
@@ -320,9 +322,9 @@ class _PodcastItemState extends State<PodcastItem> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ===== COVER =====
             _buildCover(),
@@ -332,11 +334,10 @@ class _PodcastItemState extends State<PodcastItem> {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
                 children: [
                   // Episode title with the segment before '|' highlighted in teal
                   _buildHighlightedTitle(widget.podcast.title),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 6),
 
                   // Progress bar (thin, teal, tappable via Slider)
                   SliderTheme(

@@ -69,8 +69,10 @@ class _EnlargedTabsScreenState extends State<EnlargedTabsScreen>
             child: TabBar(
               controller: _tabController,
               indicatorColor: AppColors.customStyle,
-              indicatorWeight: 3,
-              indicatorSize: TabBarIndicatorSize.tab,
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
+              indicatorSize: TabBarIndicatorSize.label,
+              labelPadding: const EdgeInsets.symmetric(horizontal: 16),
               labelColor: AppColors.customStyle,
               unselectedLabelColor: Colors.white.withValues(alpha: 0.5),
               labelStyle: AppTextStyles.tabActive,

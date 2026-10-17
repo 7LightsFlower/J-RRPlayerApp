@@ -76,6 +76,10 @@ class _FullScreenTabsState extends State<FullScreenTabs>
             child: TabBar(
               controller: _fullScreenTabController,
               labelColor: AppColors.customStyle,
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
+              indicatorSize: TabBarIndicatorSize.label,
+              labelPadding: const EdgeInsets.symmetric(horizontal: 16),
               unselectedLabelColor: Colors.white.withValues(alpha: 0.5),
               indicatorColor: AppColors.customStyle,
               labelStyle: AppTextStyles.tabActive,

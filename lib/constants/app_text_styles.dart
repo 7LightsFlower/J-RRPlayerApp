@@ -87,7 +87,7 @@ class AppTextStyles {
   /// Название подкаста / эпизода в списке
   static const TextStyle podcastTitle = TextStyle(
     fontSize: AppFontSizes.smallMedium,
-    fontWeight: FontWeight.w600,
+    fontWeight: FontWeight.w400,
     color: AppColors.customWhite,
     height: 1.2,
   );
