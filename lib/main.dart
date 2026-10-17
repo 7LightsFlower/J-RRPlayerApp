@@ -5,21 +5,9 @@ import 'services/audio_player_service.dart';
 import 'repositories/podcast_repository.dart';
 import 'ui/screens/main_screen.dart';
 import 'ui/screens/podcast_list_screen.dart';
-import 'package:just_audio_background/just_audio_background.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  await JustAudioBackground.init(
-    androidNotificationChannelId: 'com.yourname.jrrplayerapp.channel.audio',
-    androidNotificationChannelName: 'Плейбэк Радио J-Rock',
-    androidNotificationOngoing: true,
-    androidShowNotificationBadge: true,
-    androidNotificationIcon: 'mipmap/ic_launcher', // можно заменить на свой
-    notificationColor: AppColors.customStyle,
-    artDownscaleWidth: 512,
-    artDownscaleHeight: 512,
-  );
 
   runApp(
     MultiProvider(

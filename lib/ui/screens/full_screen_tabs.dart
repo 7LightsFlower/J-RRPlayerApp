@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
+import 'package:jrrplayerapp/constants/app_text_styles.dart';
 import 'package:jrrplayerapp/constants/strings.dart';
 import 'package:jrrplayerapp/ui/screens/articles_feed_screen.dart';
 import 'package:jrrplayerapp/ui/screens/news_feed_screen.dart';
@@ -58,24 +59,35 @@ class _FullScreenTabsState extends State<FullScreenTabs>
     return Scaffold(
       backgroundColor: AppColors.customBackgr,
       appBar: AppBar(
-        backgroundColor: AppColors.customWhite,
-        foregroundColor: AppColors.customBackgr,
+        backgroundColor: AppColors.appBarBackground,
+        foregroundColor: Colors.white,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(AppStrings.appName),
-        bottom: TabBar(
-          controller: _fullScreenTabController,
-          labelColor: AppColors.customStyle,
-          unselectedLabelColor:
-              AppColors.customBackgr.withValues(alpha: 0.6),
-          indicatorColor: AppColors.customStyle,
-          tabs: const [
-            Tab(text: AppStrings.articlesTab),
-            Tab(text: AppStrings.newsTab),
-            Tab(text: AppStrings.podcastsTab),
-          ],
+        title: const Text(
+          AppStrings.appName,
+          style: AppTextStyles.appBarTitle,
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: Container(
+            color: AppColors.appBarBackground,
+            child: TabBar(
+              controller: _fullScreenTabController,
+              labelColor: AppColors.customStyle,
+              unselectedLabelColor: Colors.white.withValues(alpha: 0.5),
+              indicatorColor: AppColors.customStyle,
+              labelStyle: AppTextStyles.tabActive,
+              unselectedLabelStyle: AppTextStyles.tabInactive,
+              dividerColor: Colors.transparent,
+              tabs: const [
+                Tab(text: AppStrings.articlesTab),
+                Tab(text: AppStrings.newsTab),
+                Tab(text: AppStrings.podcastsTab),
+              ],
+            ),
+          ),
         ),
       ),
       body: SafeArea(
@@ -90,7 +102,6 @@ class _FullScreenTabsState extends State<FullScreenTabs>
             );
 
             if (isWide) {
-              // Landscape → rail on the left.
               return Row(
                 children: [
                   Expanded(child: _buildTabContent()),
@@ -99,7 +110,6 @@ class _FullScreenTabsState extends State<FullScreenTabs>
               );
             }
 
-            // Portrait → bottom bar.
             return Column(
               children: [
                 Expanded(child: _buildTabContent()),

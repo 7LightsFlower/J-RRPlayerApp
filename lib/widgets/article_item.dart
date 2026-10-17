@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
+import 'package:jrrplayerapp/constants/app_text_styles.dart';
 import 'package:jrrplayerapp/models/article.dart';
 import 'package:jrrplayerapp/ui/screens/articles_detail_screen.dart';
 
@@ -22,7 +23,7 @@ class ArticleItem extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1F29),
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Material(
@@ -35,26 +36,17 @@ class ArticleItem extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // ---- IMAGE ----
                 _buildThumbnail(),
-
                 const SizedBox(width: 12),
-
-                // ---- TEXT ----
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Title (white, bold, up to 2 lines)
+                      // Title
                       Text(
                         article.title,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          height: 1.25,
-                        ),
+                        style: AppTextStyles.mediumBold,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -65,9 +57,7 @@ class ArticleItem extends StatelessWidget {
                         const SizedBox(height: 6),
                         Text(
                           article.description,
-                          style: const TextStyle(
-                            color: Color(0xFF9AA4B2),
-                            fontSize: 13,
+                          style: AppTextStyles.podcastMeta.copyWith(
                             height: 1.35,
                           ),
                           maxLines: 2,
@@ -81,28 +71,18 @@ class ArticleItem extends StatelessWidget {
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          // Date (left)
                           Text(
                             article.date,
-                            style: const TextStyle(
-                              color: Color(0xFF6E7787),
-                              fontSize: 12,
-                            ),
+                            style: AppTextStyles.smallMuted,
                           ),
-
                           const Spacer(),
-
-                          // Category badge (right)
                           _buildCategoryBadge(category),
                         ],
                       ),
                     ],
                   ),
                 ),
-
                 const SizedBox(width: 4),
-
-                // Chevron
                 const Icon(
                   Icons.chevron_right,
                   color: Colors.white,
@@ -138,7 +118,7 @@ class ArticleItem extends StatelessWidget {
 
   Widget _placeholder() {
     return Container(
-      color: const Color(0xFF232A36),
+      color: AppColors.surfaceMuted,
       child: const Center(
         child: Icon(
           Icons.article_outlined,
@@ -150,7 +130,6 @@ class ArticleItem extends StatelessWidget {
   }
 
   // ==================== CATEGORY BADGE ====================
-  /// Small teal badge with an icon and the category name in caps.
   Widget _buildCategoryBadge(String category) {
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -163,22 +142,14 @@ class ArticleItem extends StatelessWidget {
         const SizedBox(width: 4),
         Text(
           category.toUpperCase(),
-          style: const TextStyle(
-            color: AppColors.customStyle,
-            fontSize: 10,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.6,
-          ),
+          style: AppTextStyles.smallAccent.copyWith(letterSpacing: 0.6),
         ),
       ],
     );
   }
 
-  /// Picks a Material icon based on the category name.
-  /// Falls back to a generic article icon if the category is unknown.
   IconData _iconForCategory(String category) {
     final c = category.toLowerCase();
-
     if (c.contains('история')) return Icons.account_balance;
     if (c.contains('перевод')) return Icons.headphones;
     if (c.contains('между делом')) return Icons.menu_book;
@@ -196,11 +167,9 @@ class ArticleItem extends StatelessWidget {
     if (c.contains('статья') || c.contains('статьи')) {
       return Icons.article_outlined;
     }
-
     return Icons.label_outline;
   }
 
-  // ==================== NAVIGATION ====================
   void _openArticleDetail(BuildContext context) {
     Navigator.push(
       context,

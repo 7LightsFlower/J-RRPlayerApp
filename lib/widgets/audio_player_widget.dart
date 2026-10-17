@@ -360,7 +360,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                                 height: playButtonSize * 0.4,
                                 child: const CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  color: Colors.white,
+                                  color: AppColors.customWhite,
                                 ),
                               )
                             : Icon(
@@ -392,13 +392,12 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
             ),
             SizedBox(height: largeSpacing),
 
-            // ============ ALBUM COVER + TRACK INFO (FIXED LAYOUT) ============
+            // ============ ALBUM COVER + TRACK INFO ============
             Padding(
               padding: EdgeInsets.symmetric(horizontal: largeSpacing),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // ---- ALBUM COVER (фиксированная ширина) ----
                   ValueListenableBuilder<int>(
                     valueListenable: _imageUpdateNotifier,
                     builder: (_, imageVersion, __) {
@@ -429,30 +428,23 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                   ),
                   SizedBox(width: mediumSpacing),
 
-                  // ---- TRACK INFO (занимает всё оставшееся место) ----
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         // "СЕЙЧАС В ЭФИРЕ"
-                        Row(
+                        const Row(
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.bar_chart,
                               color: AppColors.customStyle,
                               size: 16,
                             ),
-                            const SizedBox(width: 6),
+                            SizedBox(width: 6),
                             Text(
                               'СЕЙЧАС В ЭФИРЕ',
-                              style: TextStyle(
-                                color: AppColors.customStyle
-                                    .withValues(alpha: 0.85),
-                                fontSize: AppFontSizes.small,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 1,
-                              ),
+                              style: AppTextStyles.smallAccent,
                             ),
                           ],
                         ),
@@ -466,10 +458,10 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                                 metadata?.title ?? 'Радио J-Rock';
                             return Text(
                               title,
-                              style: TextStyle(
-                                fontSize: isCompact ? AppFontSizes.compactLarge : AppFontSizes.large,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.customWhite,
+                              style: AppTextStyles.large.copyWith(
+                                fontSize: isCompact
+                                    ? AppFontSizes.compactLarge
+                                    : AppFontSizes.large,
                               ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
@@ -484,10 +476,10 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                           builder: (_, metadata, __) {
                             return Text(
                               metadata?.artist ?? 'Онлайн радио',
-                              style: TextStyle(
-                                fontSize: isCompact ? AppFontSizes.medium : AppFontSizes.compactLarge,
-                                color: AppColors.customWhite
-                                    .withValues(alpha: 0.6),
+                              style: AppTextStyles.mediumMuted.copyWith(
+                                fontSize: isCompact
+                                    ? AppFontSizes.medium
+                                    : AppFontSizes.compactLarge,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -502,7 +494,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
             ),
             SizedBox(height: largeSpacing),
 
-            // ==================== SINGLE VOLUME SLIDER ====================
+            // ==================== VOLUME SLIDER ====================
             Padding(
               padding: EdgeInsets.symmetric(horizontal: largeSpacing),
               child: Row(
@@ -522,9 +514,11 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                       builder: (_, volume, __) {
                         return SliderTheme(
                           data: SliderTheme.of(context).copyWith(
+                            // Активная часть — акцент (teal)
                             activeTrackColor: AppColors.customStyle,
-                            inactiveTrackColor:
-                                const Color(0xFF1C212B),
+                            // Неактивная (серая) часть seekbar —
+                            // заметный серый, чтобы видеть «оставшуюся» часть
+                            inactiveTrackColor: AppColors.sliderInactiveTrack,
                             thumbColor: AppColors.customStyle,
                             overlayColor: AppColors.customStyle
                                 .withValues(alpha: 0.2),
@@ -654,7 +648,6 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     _playingNotifier.dispose();
     _positionNotifier.dispose();
     _durationNotifier.dispose();
-    _metadataNotifier.dispose();
     _imageUpdateNotifier.dispose();
     _volumeNotifier.dispose();
     _audioService.removeListener(_onAudioServiceUpdate);

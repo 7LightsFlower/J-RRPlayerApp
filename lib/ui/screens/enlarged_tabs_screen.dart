@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
+import 'package:jrrplayerapp/constants/app_text_styles.dart';
 import 'package:jrrplayerapp/constants/strings.dart';
 import 'package:jrrplayerapp/ui/screens/articles_feed_screen.dart';
 import 'package:jrrplayerapp/ui/screens/news_feed_screen.dart';
@@ -37,8 +38,6 @@ class _EnlargedTabsScreenState extends State<EnlargedTabsScreen>
     super.dispose();
   }
 
-  /// Returns the correct tab body wrapped so it can live either under a
-  /// bottom bar (portrait) or beside a left rail (landscape).
   Widget _buildTabContent() {
     return TabBarView(
       controller: _tabController,
@@ -55,42 +54,35 @@ class _EnlargedTabsScreenState extends State<EnlargedTabsScreen>
     return Scaffold(
       backgroundColor: AppColors.customBackgr,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F141E),
+        backgroundColor: AppColors.appBarBackground,
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
         title: const Text(
           AppStrings.appName,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.5,
-          ),
+          style: AppTextStyles.appBarTitle,
         ),
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: AppColors.customStyle,
-          indicatorWeight: 3,
-          indicatorSize: TabBarIndicatorSize.tab,
-          labelColor: AppColors.customStyle,
-          unselectedLabelColor: Colors.white.withValues(alpha: 0.6),
-          labelStyle: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.3,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: Container(
+            color: AppColors.appBarBackground,
+            child: TabBar(
+              controller: _tabController,
+              indicatorColor: AppColors.customStyle,
+              indicatorWeight: 3,
+              indicatorSize: TabBarIndicatorSize.tab,
+              labelColor: AppColors.customStyle,
+              unselectedLabelColor: Colors.white.withValues(alpha: 0.5),
+              labelStyle: AppTextStyles.tabActive,
+              unselectedLabelStyle: AppTextStyles.tabInactive,
+              dividerColor: Colors.transparent,
+              tabs: const [
+                Tab(text: AppStrings.articlesTab),
+                Tab(text: AppStrings.newsTab),
+                Tab(text: AppStrings.podcastsTab),
+              ],
+            ),
           ),
-          unselectedLabelStyle: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w500,
-            letterSpacing: 0.3,
-          ),
-          dividerColor: Colors.transparent,
-          tabs: const [
-            Tab(text: AppStrings.articlesTab),
-            Tab(text: AppStrings.newsTab),
-            Tab(text: AppStrings.podcastsTab),
-          ],
         ),
       ),
       body: LayoutBuilder(
@@ -104,7 +96,6 @@ class _EnlargedTabsScreenState extends State<EnlargedTabsScreen>
           );
 
           if (isWide) {
-            // Landscape → rail on the left, content on the right.
             return Row(
               children: [
                 Expanded(child: _buildTabContent()),
@@ -113,7 +104,6 @@ class _EnlargedTabsScreenState extends State<EnlargedTabsScreen>
             );
           }
 
-          // Portrait → bar at the bottom.
           return Column(
             children: [
               Expanded(child: _buildTabContent()),

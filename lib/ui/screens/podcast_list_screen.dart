@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
+import 'package:jrrplayerapp/constants/app_text_styles.dart';
 import 'package:jrrplayerapp/repositories/podcast_repository.dart';
 import 'package:jrrplayerapp/services/audio_player_service.dart';
 import 'package:provider/provider.dart';
@@ -225,10 +226,8 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
     _connectivitySubscription = _connectivity.onConnectivityChanged.listen(_handleConnectivityResult);
     _scrollController.addListener(_scrollListener);
 
-    // 1. Сначала загружаем кеш (показываем сразу, если есть)
     await _loadCachedData();
 
-    // 2. Если есть интернет, запускаем фоновое обновление свежими данными
     if (_connectionType != ConnectionType.offline) {
       _fetchFreshData();
     }
@@ -273,9 +272,6 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
     debugPrint('🔌 Connection type: $_connectionType');
   }
 
-  // ----------------------------------------------------------------------
-  // Загрузка кеша
-  // ----------------------------------------------------------------------
   Future<void> _loadCachedData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -321,26 +317,20 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
     }
   }
 
-  // ----------------------------------------------------------------------
-  // Фоновое обновление (используем AppStrings.getWithProxy)
-  // ----------------------------------------------------------------------
   Future<void> _fetchFreshData() async {
     if (!mounted) return;
     if (_connectionType == ConnectionType.offline) return;
 
-    // Получаем репозиторий синхронно (до всех await)
     final podcastRepo = Provider.of<PodcastRepository>(context, listen: false);
 
     try {
       _isDownloading = true;
       _startStatusUpdates();
 
-      // Пробуем загрузить полный RSS через универсальный метод с прокси
       final response = await AppStrings.getWithProxy(AppStrings.podcastRssOriginalUrl);
       final responseBody = response.body;
       debugPrint('📡 RSS получен, длина: ${responseBody.length}');
 
-      // Парсим
       List<PodcastEpisode> freshPodcasts;
       if (kIsWeb) {
         freshPodcasts = _parseRssFull(responseBody);
@@ -349,11 +339,9 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
             .timeout(const Duration(seconds: 10), onTimeout: () => []);
       }
 
-      // Проверяем, что виджет ещё существует
       if (!mounted) return;
 
       if (freshPodcasts.isNotEmpty) {
-        // Сохраняем в кеш
         await _saveToCache(responseBody);
 
         podcastRepo.setEpisodes(freshPodcasts);
@@ -367,15 +355,12 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
         });
         debugPrint('✅ Загружено ${freshPodcasts.length} эпизодов из сети');
       } else {
-        // Парсинг вернул пустой список – используем кеш, если есть
         if (podcasts.isEmpty) {
-          // Если кеша не было, показываем ошибку
           setState(() {
             errorMessage = 'Не удалось загрузить подкасты (пустой ответ)';
             isLoading = false;
           });
         } else {
-          // Показываем кеш
           setState(() {
             errorMessage = 'Обновление не удалось, показаны кешированные данные';
           });
@@ -390,7 +375,6 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
             isLoading = false;
           });
         } else {
-          // Есть кеш – просто показываем уведомление
           setState(() {
             errorMessage = 'Не удалось обновить, показан кеш';
           });
@@ -402,9 +386,6 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
     }
   }
 
-  // ----------------------------------------------------------------------
-  // Ручное обновление (pull-to-refresh)
-  // ----------------------------------------------------------------------
   Future<void> _refreshPodcasts() async {
     if (!mounted) return;
     if (_connectionType == ConnectionType.offline) {
@@ -416,9 +397,6 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
     await _fetchFreshData();
   }
 
-  // ----------------------------------------------------------------------
-  // Кэш (сохранение)
-  // ----------------------------------------------------------------------
   Future<void> _saveToCache(String rssData) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -430,9 +408,6 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
     }
   }
 
-  // ----------------------------------------------------------------------
-  // Вспомогательные методы
-  // ----------------------------------------------------------------------
   void _startStatusUpdates() {
     _statusUpdateTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
       if (_isDownloading && mounted) {
@@ -474,9 +449,6 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
     }
   }
 
-  // ----------------------------------------------------------------------
-  // Пагинация
-  // ----------------------------------------------------------------------
   void _scrollListener() {
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 300) {
@@ -537,9 +509,6 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
     super.dispose();
   }
 
-  // ----------------------------------------------------------------------
-  // Build
-  // ----------------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -579,14 +548,14 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
             children: [
               Text(
                 _downloadStatus,
-                style: const TextStyle(color: AppColors.customWhite, fontSize: 16),
+                style: AppTextStyles.medium,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
               if (_connectionType == ConnectionType.mobile)
-                const Text(
+                Text(
                   'Используется оптимизированный режим для медленного соединения',
-                  style: TextStyle(color: AppColors.customGrey, fontSize: 12),
+                  style: AppTextStyles.podcastMeta,
                   textAlign: TextAlign.center,
                 ),
             ],
@@ -613,7 +582,7 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
             const SizedBox(height: 16),
             Text(
               errorMessage,
-              style: const TextStyle(color: AppColors.customWhite, fontSize: 16),
+              style: AppTextStyles.medium,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -626,7 +595,7 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
                     backgroundColor: AppColors.customGreen,
                     foregroundColor: AppColors.customWhite,
                   ),
-                  child: const Text('Повторить'),
+                  child: const Text('Повторить', style: AppTextStyles.button),
                 ),
                 const SizedBox(width: 16),
                 if (_connectionType != ConnectionType.offline && podcasts.isNotEmpty)
@@ -636,7 +605,7 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
                         errorMessage = '';
                       });
                     },
-                    child: const Text('Продолжить'),
+                    child: const Text('Продолжить', style: AppTextStyles.button),
                   ),
               ],
             ),
@@ -655,14 +624,14 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
           const SizedBox(height: 16),
           const Text(
             'Нет доступных подкастов',
-            style: TextStyle(color: AppColors.customWhite, fontSize: 18),
+            style: AppTextStyles.large,
           ),
           const SizedBox(height: 8),
           Text(
             _connectionType == ConnectionType.offline
                 ? 'Подключитесь к интернету для загрузки'
                 : 'Проверьте соединение и попробуйте снова',
-            style: const TextStyle(color: AppColors.customGrey),
+            style: AppTextStyles.mediumMuted,
           ),
           const SizedBox(height: 24),
           ElevatedButton(
@@ -671,7 +640,7 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
               backgroundColor: AppColors.customGreen,
               foregroundColor: AppColors.customWhite,
             ),
-            child: const Text('Загрузить подкасты'),
+            child: const Text('Загрузить подкасты', style: AppTextStyles.button),
           ),
         ],
       ),
@@ -711,7 +680,7 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
                     _connectionType == ConnectionType.mobile
                         ? 'Загрузка... (может занять время)'
                         : 'Загрузка...',
-                    style: const TextStyle(color: AppColors.customGrey),
+                    style: AppTextStyles.podcastMeta,
                   ),
                 ],
               )
@@ -721,7 +690,7 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
                   backgroundColor: AppColors.customGreen,
                   foregroundColor: AppColors.customWhite,
                 ),
-                child: const Text('Загрузить еще'),
+                child: const Text('Загрузить еще', style: AppTextStyles.button),
               ),
       ),
     );

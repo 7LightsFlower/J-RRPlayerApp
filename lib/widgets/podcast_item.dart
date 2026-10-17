@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
+import 'package:jrrplayerapp/constants/app_text_styles.dart';
 import 'package:jrrplayerapp/models/podcast.dart';
 import 'package:jrrplayerapp/services/audio_player_service.dart';
 import 'package:jrrplayerapp/repositories/podcast_repository.dart';
@@ -159,7 +160,7 @@ class _PodcastItemState extends State<PodcastItem> {
       SnackBar(
         content: Text(
           message,
-          style: const TextStyle(color: AppColors.customWhite),
+          style: AppTextStyles.medium,
         ),
         backgroundColor: AppColors.customRed,
         duration: const Duration(seconds: 3),
@@ -191,11 +192,7 @@ class _PodcastItemState extends State<PodcastItem> {
   /// line in white. The '|' itself is hidden.
   /// Falls back to plain white (single line) if there's no '|'.
   Widget _buildHighlightedTitle(String title) {
-    const TextStyle baseStyle = TextStyle(
-      fontSize: 15,
-      fontWeight: FontWeight.w600,
-      height: 1.25,
-    );
+    const TextStyle baseStyle = AppTextStyles.podcastTitle;
 
     final int barIndex = title.indexOf('|');
 
@@ -203,7 +200,7 @@ class _PodcastItemState extends State<PodcastItem> {
       // No separator — render the whole title in white.
       return Text(
         title,
-        style: baseStyle.copyWith(color: Colors.white),
+        style: baseStyle,
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
       );
@@ -221,7 +218,7 @@ class _PodcastItemState extends State<PodcastItem> {
           if (prefix.isNotEmpty)
             TextSpan(
               text: prefix,
-              style: const TextStyle(color: AppColors.customStyle),
+              style: baseStyle.copyWith(color: AppColors.customStyle),
             ),
           if (prefix.isNotEmpty && suffix.isNotEmpty)
             // Line break replaces the hidden '|'.
@@ -229,7 +226,7 @@ class _PodcastItemState extends State<PodcastItem> {
           if (suffix.isNotEmpty)
             TextSpan(
               text: suffix,
-              style: const TextStyle(color: Colors.white),
+              style: baseStyle.copyWith(color: Colors.white),
             ),
         ],
       ),
@@ -384,19 +381,11 @@ class _PodcastItemState extends State<PodcastItem> {
                     children: [
                       Text(
                         _formatDuration(_currentPosition),
-                        style: const TextStyle(
-                          color: Color(0xFF9AA4B2),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                        ),
+                        style: AppTextStyles.podcastMeta,
                       ),
                       Text(
                         _formatDuration(actualDuration),
-                        style: const TextStyle(
-                          color: Color(0xFF9AA4B2),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                        ),
+                        style: AppTextStyles.podcastMeta,
                       ),
                     ],
                   ),

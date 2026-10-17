@@ -15,8 +15,7 @@ dependencies:
   audioplayers: ^5.2.1
   audio_service: ^0.18.18
   audio_session: ^0.1.18
-  just_audio: ^0.9.43        # Updated
-  just_audio_background: ^0.0.1-beta.17
+  just_audio: ^0.9.43        
   
   # CRITICAL FIX: Connectivity
   connectivity_plus: ^6.1.2  # Updated (Fixes ITMS-91061)

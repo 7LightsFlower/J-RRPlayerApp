@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:jrrplayerapp/constants/app_text_styles.dart';
 import 'package:provider/provider.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
 import 'package:jrrplayerapp/widgets/audio_player_widget.dart';
@@ -234,7 +235,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                 AppStrings.appName.toUpperCase(),
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 15,
+                  fontSize: AppFontSizes.medium,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 1.2,
                 ),
@@ -280,7 +281,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   // ==================== APP DRAWER ====================
   Widget _buildAppDrawer() {
     return Drawer(
-      backgroundColor: const Color(0xFF0F141E),
+      backgroundColor: AppColors.appBarBackground,
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
@@ -296,7 +297,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                   'Плеер Радио J-Rock',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 18,
+                    fontSize: AppFontSizes.medium,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -348,7 +349,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF0F141E),
+        backgroundColor: AppColors.appBarBackground,
         title: const Text(
           'Статус сигнала',
           style: TextStyle(color: Colors.white),
@@ -412,7 +413,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
             'LIVE',
             style: TextStyle(
               color: Colors.white,
-              fontSize: 12,
+              fontSize: AppFontSizes.small,
               fontWeight: FontWeight.w600,
               letterSpacing: 1.5,
             ),
@@ -466,7 +467,7 @@ class AboutScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.customBackgr,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F141E),
+        backgroundColor: AppColors.appBarBackground,
         foregroundColor: Colors.white,
         elevation: 0,
         title: const Text('О радио'),
@@ -482,7 +483,7 @@ class AboutScreen extends StatelessWidget {
               height: 120,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF0F141E),
+                color: AppColors.appBarBackground,
                 border: Border.all(
                   color: AppColors.customStyle.withValues(alpha: 0.5),
                   width: 2,
@@ -506,7 +507,7 @@ class AboutScreen extends StatelessWidget {
               AppStrings.appName,
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 22,
+                fontSize: AppFontSizes.large,
                 fontWeight: FontWeight.bold,
               ),
               textAlign: TextAlign.center,
@@ -514,7 +515,7 @@ class AboutScreen extends StatelessWidget {
             const SizedBox(height: 8),
             const Text(
               'Версия 1.0.0',
-              style: TextStyle(color: Colors.white54, fontSize: 14),
+              style: TextStyle(color: Colors.white54, fontSize: AppFontSizes.medium),
             ),
             const SizedBox(height: 32),
             const Text(
@@ -527,7 +528,7 @@ class AboutScreen extends StatelessWidget {
               'Можно просто слушать. А можно вместе искать свои ответы. ',
               style: TextStyle(
                 color: Colors.white70,
-                fontSize: 14,
+                fontSize: AppFontSizes.medium,
                 height: 1.5,
               ),
               textAlign: TextAlign.center,
@@ -557,12 +558,12 @@ class AboutScreen extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: const TextStyle(color: Colors.white54, fontSize: 12),
+                style: const TextStyle(color: Colors.white54, fontSize: AppFontSizes.small),
               ),
               const SizedBox(height: 2),
               Text(
                 value,
-                style: const TextStyle(color: Colors.white, fontSize: 14),
+                style: const TextStyle(color: Colors.white, fontSize: AppFontSizes.medium),
               ),
             ],
           ),
@@ -591,7 +592,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       backgroundColor: AppColors.customBackgr,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F141E),
+        backgroundColor: AppColors.appBarBackground,
         foregroundColor: Colors.white,
         elevation: 0,
         title: const Text('Настройки'),
@@ -611,7 +612,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             subtitle: const Text(
               'Запускать радио при открытии приложения',
-              style: TextStyle(color: Colors.white54, fontSize: 12),
+              style: TextStyle(color: Colors.white54, fontSize: AppFontSizes.small),
             ),
             value: _autoPlayOnStart,
             activeThumbColor: AppColors.customStyle,
@@ -632,7 +633,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             subtitle: const Text(
               'Использовать поток с более высоким битрейтом',
-              style: TextStyle(color: Colors.white54, fontSize: 12),
+              style: TextStyle(color: Colors.white54, fontSize: AppFontSizes.small),
             ),
             value: _highQualityStream,
             activeThumbColor: AppColors.customStyle,
@@ -699,7 +700,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             subtitle: const Text(
               'Отображать информацию о треке в шторке',
-              style: TextStyle(color: Colors.white54, fontSize: 12),
+              style: TextStyle(color: Colors.white54, fontSize: AppFontSizes.small),
             ),
             value: _showNotifications,
             activeThumbColor: AppColors.customStyle,
@@ -722,7 +723,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             subtitle: const Text(
               'Вернуть все параметры к значениям по умолчанию',
-              style: TextStyle(color: Colors.white54, fontSize: 12),
+              style: TextStyle(color: Colors.white54, fontSize: AppFontSizes.small),
             ),
             onTap: _resetSettings,
           ),
@@ -738,7 +739,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title.toUpperCase(),
         style: const TextStyle(
           color: AppColors.customStyle,
-          fontSize: 12,
+          fontSize: AppFontSizes.small,
           fontWeight: FontWeight.w600,
           letterSpacing: 1.2,
         ),
@@ -750,7 +751,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: const Color(0xFF0F141E),
+        backgroundColor: AppColors.appBarBackground,
         title: const Text(
           'Сбросить настройки?',
           style: TextStyle(color: Colors.white),

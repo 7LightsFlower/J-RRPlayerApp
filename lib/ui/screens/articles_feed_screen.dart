@@ -7,6 +7,7 @@ import 'package:html/parser.dart' as parser;
 import 'package:html/dom.dart' as dom;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
+import 'package:jrrplayerapp/constants/app_text_styles.dart';
 import 'package:jrrplayerapp/models/article.dart';
 import 'package:jrrplayerapp/widgets/article_item.dart';
 import 'package:jrrplayerapp/constants/strings.dart';
@@ -29,7 +30,6 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
   final ScrollController _scrollController = ScrollController();
   final Set<String> _loadedUrls = {};
 
-  // Featured carousel
   late final PageController _featuredController;
   Timer? _autoScrollTimer;
   int _featuredIndex = 0;
@@ -60,7 +60,6 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
     }
   }
 
-  // ==================== AUTO SCROLL ====================
   void _startAutoScroll() {
     _autoScrollTimer?.cancel();
     _autoScrollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
@@ -76,7 +75,6 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
     });
   }
 
-  // ==================== LOADING ====================
   Future<void> _loadArticles() async {
     setState(() {
       _isLoading = true;
@@ -131,7 +129,6 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
     }
   }
 
-  // ==================== PARSER ====================
   void _parseHtml(String html, {required bool isFirstLoad}) {
     final document = parser.parse(html);
     var items = document.querySelectorAll('a.row');
@@ -289,15 +286,13 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
     return months[m];
   }
 
-  // ==================== BUILD ====================
-
   @override
   Widget build(BuildContext context) {
     if (_isLoading) return _buildLoader();
     if (_error.isNotEmpty) return _buildError();
     if (_articles.isEmpty) {
-      return const Center(
-        child: Text('Пусто', style: TextStyle(color: AppColors.customGrey)),
+      return Center(
+        child: Text('Пусто', style: AppTextStyles.smallMuted),
       );
     }
 
@@ -306,7 +301,7 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
 
     return RefreshIndicator(
       onRefresh: _loadArticles,
-      color: AppColors.customGreen,
+      color: AppColors.customStyle,
       child: ListView(
         controller: _scrollController,
         padding: const EdgeInsets.only(bottom: 8),
@@ -331,7 +326,6 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
 
           const SizedBox(height: 12),
 
-          // ---------- DOT INDICATORS ----------
           _buildDots(featured.length),
 
           const SizedBox(height: 20),
@@ -344,12 +338,7 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
               children: [
                 const Text(
                   'НОВЫЕ МАТЕРИАЛЫ',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.8,
-                  ),
+                  style: AppTextStyles.small,
                 ),
                 GestureDetector(
                   onTap: () {
@@ -362,14 +351,7 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
                   },
                   child: const Row(
                     children: [
-                      Text(
-                        'Все материалы',
-                        style: TextStyle(
-                          color: AppColors.customStyle,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
+                      Text('Все материалы', style: AppTextStyles.smallAccent),
                       SizedBox(width: 4),
                       Icon(
                         Icons.chevron_right,
@@ -394,19 +376,16 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
                     padding: EdgeInsets.all(20),
                     child: Center(
                       child: CircularProgressIndicator(
-                        color: AppColors.customGreen,
+                        color: AppColors.customStyle,
                       ),
                     ),
                   )
                 : const SizedBox(height: 20)
           else
-            const Padding(
-              padding: EdgeInsets.all(20),
+            Padding(
+              padding: const EdgeInsets.all(20),
               child: Center(
-                child: Text(
-                  'Больше нет',
-                  style: TextStyle(color: AppColors.customWhiteTransp),
-                ),
+                child: Text('Больше нет', style: AppTextStyles.smallMuted),
               ),
             ),
         ],
@@ -425,7 +404,7 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
           width: active ? 10 : 8,
           height: active ? 10 : 8,
           decoration: BoxDecoration(
-            color: active ? AppColors.customStyle : const Color(0xFF3A4553),
+            color: active ? AppColors.customStyle : AppColors.dotInactive,
             shape: BoxShape.circle,
           ),
         );
@@ -435,7 +414,7 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
 
   Widget _buildLoader() {
     return const Center(
-      child: CircularProgressIndicator(color: AppColors.customGreen),
+      child: CircularProgressIndicator(color: AppColors.customStyle),
     );
   }
 
@@ -448,29 +427,23 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
           const SizedBox(height: 20),
           Text(
             _error.isEmpty ? 'Нет интернета' : _error,
-            style: const TextStyle(
-              color: AppColors.customWhiteTransp,
-              fontSize: 16,
-            ),
+            style: AppTextStyles.mediumMuted,
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: _loadArticles,
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.customGreen,
+              backgroundColor: AppColors.customStyle,
+              foregroundColor: Colors.white,
             ),
-            child: const Text(
-              'Обновить',
-              style: TextStyle(color: AppColors.customWhite),
-            ),
+            child: const Text('Обновить', style: AppTextStyles.button),
           ),
         ],
       ),
     );
   }
 }
-
 
 // ==================== FEATURED CARD ====================
 class _FeaturedArticleCard extends StatelessWidget {
@@ -493,16 +466,15 @@ class _FeaturedArticleCard extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // Background image
             CachedNetworkImage(
               imageUrl: article.imageUrl,
               fit: BoxFit.cover,
-              placeholder: (_, __) => Container(color: const Color(0xFF232A36)),
+              placeholder: (_, __) =>
+                  Container(color: AppColors.surfaceMuted),
               errorWidget: (_, __, ___) =>
-                  Container(color: const Color(0xFF232A36)),
+                  Container(color: AppColors.surfaceMuted),
             ),
 
-            // Dark gradient overlay (bottom → transparent)
             const DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -518,7 +490,6 @@ class _FeaturedArticleCard extends StatelessWidget {
               ),
             ),
 
-            // Bookmark icon (top-right)
             Positioned(
               top: 12,
               right: 12,
@@ -537,7 +508,6 @@ class _FeaturedArticleCard extends StatelessWidget {
               ),
             ),
 
-            // Text block (bottom)
             Positioned(
               left: 16,
               right: 16,
@@ -546,66 +516,41 @@ class _FeaturedArticleCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Category
                   Text(
                     (article.category ?? 'Статья').toUpperCase(),
-                    style: const TextStyle(
-                      color: AppColors.customStyle,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1,
-                    ),
+                    style: AppTextStyles.smallAccent.copyWith(letterSpacing: 1),
                   ),
                   const SizedBox(height: 6),
-
-                  // Title
                   Text(
                     article.title,
-                    style: const TextStyle(
+                    style: AppTextStyles.mediumBold.copyWith(
                       color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
                       height: 1.2,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 8),
-
-                  // Description
                   if (article.description.isNotEmpty)
                     Text(
                       article.description,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 13,
-                        height: 1.35,
-                      ),
+                      style: AppTextStyles.smallMuted.copyWith(height: 1.35),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                   const SizedBox(height: 12),
-
-                  // Date + "Читать далее →"
                   Row(
                     children: [
                       Text(
                         article.date,
-                        style: const TextStyle(
-                          color: Colors.white60,
-                          fontSize: 12,
-                        ),
+                        style: AppTextStyles.smallMuted,
                       ),
                       const Spacer(),
                       const Row(
                         children: [
                           Text(
                             'Читать далее',
-                            style: TextStyle(
-                              color: AppColors.customStyle,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style: AppTextStyles.smallAccent,
                           ),
                           SizedBox(width: 4),
                           Icon(
@@ -626,6 +571,7 @@ class _FeaturedArticleCard extends StatelessWidget {
     );
   }
 }
+
 // ==================== ALL ARTICLES SCREEN ====================
 class AllArticlesScreen extends StatelessWidget {
   final List<Article> articles;
@@ -636,26 +582,15 @@ class AllArticlesScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.customBackgr,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F141E),
+        backgroundColor: AppColors.appBarBackground,
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        title: const Text(
-          'Все материалы',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.5,
-          ),
-        ),
+        title: const Text('Все материалы', style: AppTextStyles.appBarTitle),
       ),
       body: articles.isEmpty
-          ? const Center(
-              child: Text(
-                'Пока ничего нет',
-                style: TextStyle(color: AppColors.customGrey),
-              ),
+          ? Center(
+              child: Text('Пока ничего нет', style: AppTextStyles.mediumMuted),
             )
           : ListView.builder(
               padding: const EdgeInsets.symmetric(vertical: 8),

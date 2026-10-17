@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
+import 'package:jrrplayerapp/constants/app_text_styles.dart';
 import 'package:jrrplayerapp/constants/strings.dart';
 
 class AppBottomNav extends StatelessWidget {
@@ -16,9 +17,6 @@ class AppBottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Landscape = width > height → switch to left rail.
-        // We compare against MediaQuery so it also works when the parent
-        // gives us a wide-but-short slot in a Column/Row.
         final Size screen = MediaQuery.of(context).size;
         final bool isWide = screen.width > screen.height;
 
@@ -42,9 +40,9 @@ class AppBottomNav extends StatelessWidget {
         horizontal: 8,
       ),
       decoration: const BoxDecoration(
-        color: Color(0xFF0F141E),
+        color: AppColors.appBarBackground,
         border: Border(
-          top: BorderSide(color: Color(0xFF1C212B), width: 1),
+          top: BorderSide(color: AppColors.appBarBorder, width: 1),
         ),
       ),
       child: Row(
@@ -69,10 +67,8 @@ class AppBottomNav extends StatelessWidget {
     return Expanded(
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: () {
-          if (isActive) return;
-          onTap?.call(index);
-        },
+        // REMOVED: if (isActive) return;
+        onTap: () => onTap?.call(index),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: Column(
@@ -92,14 +88,10 @@ class AppBottomNav extends StatelessWidget {
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: isActive
-                        ? AppColors.customStyle
-                        : Colors.white.withValues(alpha: 0.5),
-                    fontSize: labelSize,
-                    fontWeight:
-                        isActive ? FontWeight.w600 : FontWeight.normal,
-                  ),
+                  style: (isActive
+                          ? AppTextStyles.navActive
+                          : AppTextStyles.navInactive)
+                      .copyWith(fontSize: labelSize),
                 ),
               ),
             ],
@@ -111,22 +103,19 @@ class AppBottomNav extends StatelessWidget {
 
   // ==================== SIDE RAIL (landscape) ====================
   Widget _buildSideRail(BuildContext context) {
-    // Fixed width — comfortable for icon + label.
     const double railWidth = 88.0;
 
     return Container(
       width: railWidth,
       decoration: const BoxDecoration(
-        color: Color(0xFF0F141E),
+        color: AppColors.appBarBackground,
         border: Border(
-          // Border is now on the LEFT, since rail is on the right side.
-          left: BorderSide(color: Color(0xFF1C212B), width: 1),
+          left: BorderSide(color: AppColors.appBarBorder, width: 1),
         ),
       ),
       child: SafeArea(
         left: false,
         child: Column(
-          // Buttons spread evenly along the full height with generous spacing.
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             _sideItem(Icons.radio, AppStrings.articlesTab, 0),
@@ -143,10 +132,8 @@ class AppBottomNav extends StatelessWidget {
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: () {
-        if (isActive) return;
-        onTap?.call(index);
-      },
+      // REMOVED: if (isActive) return;
+      onTap: () => onTap?.call(index),
       child: Container(
         width: 72,
         padding: const EdgeInsets.symmetric(vertical: 14),
@@ -172,13 +159,9 @@ class AppBottomNav extends StatelessWidget {
               textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: isActive
-                    ? AppColors.customStyle
-                    : Colors.white.withValues(alpha: 0.5),
-                fontSize: 11,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-              ),
+              style: isActive
+                  ? AppTextStyles.navActive
+                  : AppTextStyles.navInactive,
             ),
           ],
         ),

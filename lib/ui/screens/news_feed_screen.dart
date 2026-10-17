@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jrrplayerapp/constants/app_text_styles.dart';
 import 'package:xml/xml.dart' as xml;
 import 'package:jrrplayerapp/constants/app_colors.dart';
 import 'package:jrrplayerapp/models/news.dart';
@@ -41,7 +42,6 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
     });
 
     try {
-      // Fetch all three feeds in parallel.
       final responses = await Future.wait(
         AppStrings.newsFeedUrls.map(
           (url) => AppStrings.getWithProxy(url),
@@ -67,13 +67,11 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
         throw Exception('Не удалось загрузить ни одного источника');
       }
 
-      // Deduplicate by guid (across feeds — some items might be shared).
       final Map<String, News> unique = {};
       for (final n in combined) {
         unique.putIfAbsent(n.id, () => n);
       }
 
-      // Sort by date descending (newest first).
       final sorted = unique.values.toList()
         ..sort((a, b) => b.parsedDate.compareTo(a.parsedDate));
 
@@ -108,7 +106,6 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
           final pubDate = _text(item, 'pubDate');
           final rawDescription = _text(item, 'description') ?? '';
 
-          // Enclosure image URL (this is where the JRR feed puts the cover).
           String imageUrl = '';
           final enclosure = item.findElements('enclosure').firstOrNull;
           if (enclosure != null) {
@@ -125,7 +122,7 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
               title: _stripHtml(title),
               date: _formatDate(parsedDate),
               imageUrl: imageUrl,
-              description: rawDescription, // keep HTML for detail screen
+              description: rawDescription,
               url: link ?? '',
               parsedDate: parsedDate,
             ),
@@ -141,13 +138,11 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
     return result;
   }
 
-  /// Returns the trimmed innerText of the first child element with [tag].
   String? _text(xml.XmlElement parent, String tag) {
     final el = parent.findElements(tag).firstOrNull;
     return el?.innerText.trim();
   }
 
-  /// Strips HTML tags for display in the list (title may contain <b> etc.).
   String _stripHtml(String raw) {
     return raw
         .replaceAll(RegExp(r'<[^>]*>'), '')
@@ -160,16 +155,12 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
         .trim();
   }
 
-  /// Parses an RFC-822 date like "Wed, 14 Oct 2026 15:45:43 GMT".
   DateTime _parseRfc822(String? raw) {
     if (raw == null || raw.isEmpty) return DateTime.now();
     try {
-      // Dart's DateTime.parse can't handle RFC-822, so we do it manually.
-      // Format: "Wed, 14 Oct 2026 15:45:43 GMT"
       final parts = raw.split(' ');
       if (parts.length < 5) return DateTime.now();
 
-      // parts[1] = day, parts[2] = month, parts[3] = year, parts[4] = time
       final day = int.tryParse(parts[1]) ?? 1;
       final month = _monthFromName(parts[2]);
       final year = int.tryParse(parts[3]) ?? DateTime.now().year;
@@ -177,7 +168,8 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
       final timeParts = parts[4].split(':');
       final hour = int.tryParse(timeParts[0]) ?? 0;
       final minute = int.tryParse(timeParts[1]) ?? 0;
-      final second = int.tryParse(timeParts.length > 2 ? timeParts[2] : '0') ?? 0;
+      final second =
+          int.tryParse(timeParts.length > 2 ? timeParts[2] : '0') ?? 0;
 
       return DateTime.utc(year, month, day, hour, minute, second).toLocal();
     } catch (_) {
@@ -218,10 +210,7 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
               const SizedBox(height: 16),
               Text(
                 _error,
-                style: const TextStyle(
-                  color: AppColors.customWhite,
-                  fontSize: 16,
-                ),
+                style: AppTextStyles.medium,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 20),
@@ -231,7 +220,10 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
                   backgroundColor: AppColors.customGreen,
                   foregroundColor: AppColors.customWhite,
                 ),
-                child: const Text('Попробовать снова'),
+                child: const Text(
+                  'Попробовать снова',
+                  style: AppTextStyles.button,
+                ),
               ),
             ],
           ),
@@ -241,22 +233,22 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
   }
 
   Widget _buildEmptyWidget() {
-    return const SingleChildScrollView(
+    return SingleChildScrollView(
       child: Center(
         child: Padding(
-          padding: EdgeInsets.all(32),
+          padding: const EdgeInsets.all(32),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
+              const Icon(
                 Icons.article_outlined,
                 size: 64,
                 color: AppColors.customGrey,
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               Text(
                 'Новости не найдены',
-                style: TextStyle(color: AppColors.customGrey, fontSize: 16),
+                style: AppTextStyles.mediumMuted,
               ),
             ],
           ),

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
+import 'package:jrrplayerapp/constants/app_text_styles.dart';
 import 'package:jrrplayerapp/models/news.dart';
-import 'package:jrrplayerapp/ui/screens/news_detail_screen.dart'; // ← добавьте импорт
+import 'package:jrrplayerapp/ui/screens/news_detail_screen.dart';
 
 class NewsItem extends StatelessWidget {
   final News news;
@@ -22,7 +23,8 @@ class NewsItem extends StatelessWidget {
             children: [
               Text(
                 news.date,
-                style: const TextStyle(color: AppColors.customGreen, fontSize: 12),
+                style: AppTextStyles.small
+                    .copyWith(color: AppColors.customGreen),
               ),
               if (news.imageUrl.isNotEmpty) ...[
                 const SizedBox(height: 8),
@@ -36,11 +38,14 @@ class NewsItem extends StatelessWidget {
               ],
               const SizedBox(height: 8),
               DefaultTextStyle(
-                style: const TextStyle(
-                  color: AppColors.customWhite,
-                  fontSize: 14,
+                style: AppTextStyles.medium,
+                child: Html(
+                  data: news.description,
+                  style: {
+                    "b": Style(fontWeight: FontWeight.w400),
+                    "strong": Style(fontWeight: FontWeight.w400),
+                  },
                 ),
-                child: Html(data: news.description),
               ),
             ],
           ),
@@ -49,7 +54,6 @@ class NewsItem extends StatelessWidget {
     );
   }
 
-  // Новый метод – открывает полноэкранный экран вместо диалога
   void _openNewsDetail(BuildContext context) {
     Navigator.push(
       context,
