@@ -143,9 +143,12 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     _syncPlayerState();
 
     final newMetadata = _audioService.currentMetadata;
-    if (_metadataNotifier.value != newMetadata) {
-      _metadataNotifier.value = newMetadata;
-      _imageUpdateNotifier.value++;
+    
+    // Принудительно обновляем метаданные и картинку
+    _metadataNotifier.value = newMetadata;
+    
+    if (newMetadata != null) {
+      _imageUpdateNotifier.value++; // Это заставит Image.network обновиться
     }
 
     if (mounted) {
@@ -154,7 +157,6 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
       });
     }
   }
-
   Future<void> _checkAndSyncState() async {
     if (!mounted) return;
 
@@ -263,6 +265,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
       final newMetadata = _audioService.currentMetadata;
       if (_metadataNotifier.value != newMetadata) {
         _metadataNotifier.value = newMetadata;
+         _imageUpdateNotifier.value++;
       }
     }
   }
@@ -277,6 +280,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     }
   }
 
+  // ignore: unused_element
   Future<void> _increaseVolume() async {
     try {
       final currentVolume = _volumeNotifier.value;
@@ -287,15 +291,6 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     }
   }
 
-  Future<void> _decreaseVolume() async {
-    try {
-      final currentVolume = _volumeNotifier.value;
-      final newVolume = (currentVolume - 0.1).clamp(0.0, 1.0);
-      await _setVolume(newVolume);
-    } catch (e) {
-      _showErrorSnackBar('Error decreasing volume: $e');
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -398,6 +393,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
+                  // ---- ALBUM COVER ----
                   ValueListenableBuilder<int>(
                     valueListenable: _imageUpdateNotifier,
                     builder: (_, imageVersion, __) {
@@ -426,45 +422,28 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                       );
                     },
                   ),
+                  
                   SizedBox(width: mediumSpacing),
 
+                  // ---- TRACK INFO ----
                   Expanded(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // "СЕЙЧАС В ЭФИРЕ"
-                        const Row(
-                          children: [
-                            Icon(
-                              Icons.bar_chart,
-                              color: AppColors.customStyle,
-                              size: 16,
-                            ),
-                            SizedBox(width: 6),
-                            Text(
-                              'СЕЙЧАС В ЭФИРЕ',
-                              style: AppTextStyles.smallAccent,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-
                         // Track title
                         ValueListenableBuilder<AudioMetadata?>(
                           valueListenable: _metadataNotifier,
                           builder: (_, metadata, __) {
-                            final title =
-                                metadata?.title ?? 'Радио J-Rock';
+                            final title = metadata?.title ?? 'Радио J-Rock';
                             return Text(
                               title,
-                              style: AppTextStyles.large.copyWith(
-                                fontSize: isCompact
-                                    ? AppFontSizes.compactLarge
-                                    : AppFontSizes.large,
+                              style: AppTextStyles.playerTrackTitle.copyWith(
+                                fontSize: isCompact ? 18.0 : 22.0,
                               ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
                             );
                           },
                         ),
@@ -476,13 +455,10 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                           builder: (_, metadata, __) {
                             return Text(
                               metadata?.artist ?? 'Онлайн радио',
-                              style: AppTextStyles.mediumMuted.copyWith(
-                                fontSize: isCompact
-                                    ? AppFontSizes.medium
-                                    : AppFontSizes.compactLarge,
-                              ),
+                              style: AppTextStyles.playerTrackArtist,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
                             );
                           },
                         ),
@@ -492,6 +468,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                 ],
               ),
             ),
+
             SizedBox(height: largeSpacing),
 
             // ==================== VOLUME SLIDER ====================
@@ -499,32 +476,50 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
               padding: EdgeInsets.symmetric(horizontal: largeSpacing),
               child: Row(
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.volume_mute),
-                    onPressed: _decreaseVolume,
-                    color: AppColors.customWhite.withValues(alpha: 0.7),
-                    iconSize: 20,
-                    tooltip: 'Тише',
+                  // Иконка громкости (контурная, светло-серая)
+                  ValueListenableBuilder<double>(
+                    valueListenable: _volumeNotifier,
+                    builder: (_, volume, __) {
+                      return IconButton(
+                        icon: Icon(
+                          volume == 0.0 
+                              ? Icons.volume_off_outlined 
+                              : Icons.volume_up_outlined, 
+                        ),
+                        onPressed: () {
+                          if (volume == 0.0) {
+                            _setVolume(1.0); 
+                          } else {
+                            _setVolume(0.0); 
+                          }
+                        },
+                        color: const Color(0xFF555555), 
+                        iconSize: 26, 
+                        tooltip: volume == 0.0 ? 'Включить звук' : 'Выключить звук',
+                      );
+                    },
                   ),
                   SizedBox(width: smallSpacing),
 
+                  // Ползунок
                   Expanded(
                     child: ValueListenableBuilder<double>(
                       valueListenable: _volumeNotifier,
                       builder: (_, volume, __) {
                         return SliderTheme(
                           data: SliderTheme.of(context).copyWith(
-                            // Активная часть — акцент (teal)
+                            overlayShape: SliderComponentShape.noOverlay,
                             activeTrackColor: AppColors.customStyle,
-                            // Неактивная (серая) часть seekbar —
-                            // заметный серый, чтобы видеть «оставшуюся» часть
-                            inactiveTrackColor: AppColors.sliderInactiveTrack,
+                            inactiveTrackColor: const Color(0xFF2C2C2C),
                             thumbColor: AppColors.customStyle,
-                            overlayColor: AppColors.customStyle
-                                .withValues(alpha: 0.2),
-                            trackHeight: 4,
+                            trackShape: const CustomRoundedSliderTrackShape(
+                              borderColor: Color(0xFF555555),
+                            ),
+                            trackHeight: 8.0,
                             thumbShape: const RoundSliderThumbShape(
-                              enabledThumbRadius: 8,
+                              enabledThumbRadius: 10.0,
+                              elevation: 0,
+                              pressedElevation: 0,
                             ),
                           ),
                           child: Slider(
@@ -543,87 +538,117 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                       },
                     ),
                   ),
-                  SizedBox(width: smallSpacing),
-
-                  IconButton(
-                    icon: const Icon(Icons.volume_up),
-                    onPressed: _increaseVolume,
-                    color: AppColors.customWhite.withValues(alpha: 0.7),
-                    iconSize: 20,
-                    tooltip: 'Громче',
-                  ),
                 ],
               ),
             ),
-
             SizedBox(height: smallSpacing),
           ],
         ),
       ),
     );
   }
-
   Widget _buildCoverImage(AudioMetadata? metadata, int imageVersion) {
-    String? imageUrl = _getImageUrl(metadata);
+    // 1. Если это подкаст, пытаемся взять его обложку
+    if (_audioService.isPodcastMode && _audioService.currentEpisode != null) {
+      final episode = _audioService.currentEpisode!;
+      final imageUrl = episode.imageUrl ?? episode.channelImageUrl;
+      
+      if (imageUrl != null && imageUrl.isNotEmpty) {
+        return _buildNetworkImage(imageUrl, imageVersion);
+      }
+      return _buildDefaultCover(); // Заглушка для подкаста
+    }
 
-    if (imageUrl != null && imageUrl.isNotEmpty) {
-      return Image.network(
-        imageUrl,
-        fit: BoxFit.cover,
-        key: ValueKey('$imageUrl$imageVersion'),
-        cacheWidth: 200,
-        filterQuality: FilterQuality.low,
-        errorBuilder: (context, error, stackTrace) {
-          return _buildDefaultCover();
-        },
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return Container(
-            color: AppColors.customWhite,
-            child: Center(
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  value: loadingProgress.expectedTotalBytes != null
-                      ? loadingProgress.cumulativeBytesLoaded /
-                          loadingProgress.expectedTotalBytes!
-                      : null,
-                ),
+    // 2. Если это радио, и метаданные (название трека/обложка) уже пришли
+    if (metadata?.artUrl != null && metadata!.artUrl.isNotEmpty) {
+      return _buildNetworkImage(metadata.artUrl, imageVersion);
+    }
+
+    // 3. Если это радио, но метаданные ещё не пришли
+    return _buildRadioPlaceholder();
+  }
+
+  Widget _buildNetworkImage(String imageUrl, int imageVersion) {
+    return Image.network(
+      imageUrl,
+      fit: BoxFit.cover,
+      key: ValueKey('$imageUrl$imageVersion'),
+      cacheWidth: 200,
+      filterQuality: FilterQuality.low,
+      errorBuilder: (context, error, stackTrace) {
+        return _audioService.isPodcastMode 
+            ? _buildDefaultCover() 
+            : _buildRadioPlaceholder();
+      },
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return Container(
+          color: AppColors.appBarBackground,
+          child: Center(
+            child: SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppColors.customStyle,
+                value: loadingProgress.expectedTotalBytes != null
+                    ? loadingProgress.cumulativeBytesLoaded /
+                        loadingProgress.expectedTotalBytes!
+                    : null,
               ),
             ),
-          );
-        },
-      );
-    } else {
-      return _buildDefaultCover();
-    }
+          ),
+        );
+      },
+    );
   }
 
-  String? _getImageUrl(AudioMetadata? metadata) {
-    if (metadata?.artUrl != null && metadata!.artUrl.isNotEmpty) {
-      return metadata.artUrl;
-    }
-
-    final episode = _audioService.currentEpisode;
-    if (episode != null) {
-      if (episode.imageUrl != null && episode.imageUrl!.isNotEmpty) {
-        return episode.imageUrl;
-      }
-      if (episode.channelImageUrl != null &&
-          episode.channelImageUrl!.isNotEmpty) {
-        return episode.channelImageUrl;
-      }
-    }
-
-    return null;
+  // Бледная иконка радио для состояния "нет метаданных"
+  // Бледная (серая) иконка радио для состояния "нет метаданных"
+  Widget _buildRadioPlaceholder() {
+    return Container(
+      color: AppColors.appBarBackground, // Темный фон
+      child: Center(
+        child: ColorFiltered(
+          // Перекрашиваем всю картинку в customGrey, сохраняя форму
+          colorFilter: ColorFilter.mode(
+            AppColors.customGrey.withValues(alpha: 0.5), // Делаем бледнее (опционально)
+            BlendMode.srcIn,
+          ),
+          child: Image.asset(
+            'assets/images/default_cover.png',
+            width: 60,
+            height: 60,
+            fit: BoxFit.contain,
+          ),
+        ),
+      ),
+    );
   }
-
+  
+  // Заглушка для подкаста (если у эпизода вообще нет картинки)
   Widget _buildDefaultCover() {
-    return Image.asset(
-      'assets/images/default_cover.png',
-      fit: BoxFit.cover,
+    return Container(
+      color: AppColors.cardBackground,
+      child: Center(
+        child: ColorFiltered(
+          colorFilter: const ColorFilter.matrix(<double>[
+            0.2126, 0.7152, 0.0722, 0, 0,
+            0.2126, 0.7152, 0.0722, 0, 0,
+            0.2126, 0.7152, 0.0722, 0, 0,
+            0,      0,      0,      1, 0,
+          ]),
+          child: Opacity(
+            opacity: 0.5, // Для подкастов можно сделать чуть ярче
+            child: Image.asset(
+              'assets/images/default_cover.png', // Та же картинка
+              width: 60,
+              height: 60,
+              fit: BoxFit.contain,
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -683,5 +708,89 @@ class ValueListenableBuilder2<A, B> extends StatelessWidget {
         );
       },
     );
+  }
+}
+
+// =============================================================
+// КАСТОМНЫЙ ТРЕК ДЛЯ ПОЛЗУНКА (С ОБВОДКОЙ)
+// =============================================================
+class CustomRoundedSliderTrackShape extends SliderTrackShape with BaseSliderTrackShape {
+  final Color borderColor;
+
+  const CustomRoundedSliderTrackShape({required this.borderColor});
+
+  @override
+  void paint(
+    PaintingContext context,
+    Offset offset, {
+    required RenderBox parentBox,
+    required SliderThemeData sliderTheme,
+    required Animation<double> enableAnimation,
+    required TextDirection textDirection,
+    required Offset thumbCenter,
+    Offset? secondaryOffset,
+    bool isDiscrete = false,
+    bool isEnabled = false,
+    double additionalActiveTrackHeight = 2,
+  }) {
+    final double trackHeight = sliderTheme.trackHeight ?? 4;
+    final double trackLeft = offset.dx;
+    final double trackTop = offset.dy + (parentBox.size.height - trackHeight) / 2;
+    final double trackWidth = parentBox.size.width;
+    final Rect trackRect = Rect.fromLTWH(trackLeft, trackTop, trackWidth, trackHeight);
+    final double radius = trackHeight / 2;
+
+    // 1. Рисуем обводку (контур) на весь трек
+    final Paint borderPaint = Paint()
+      ..color = borderColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+
+    final canvas = context.canvas;
+    final RRect rrect = RRect.fromRectAndRadius(trackRect, Radius.circular(radius));
+    canvas.drawRRect(rrect, borderPaint);
+
+    // 2. Рисуем неактивную часть (правую)
+    final Paint inactivePaint = Paint()
+      ..color = sliderTheme.inactiveTrackColor ?? Colors.transparent
+      ..style = PaintingStyle.fill;
+
+    final Rect rightTrackRect = Rect.fromLTRB(
+      thumbCenter.dx,
+      trackTop + 1,
+      trackRect.right,
+      trackRect.bottom - 1,
+    );
+    final RRect rightRRect = RRect.fromRectAndRadius(rightTrackRect, Radius.circular(radius - 1));
+    context.canvas.drawRRect(rightRRect, inactivePaint);
+
+    // 3. Рисуем активную часть (левую)
+    final Paint activePaint = Paint()
+      ..color = sliderTheme.activeTrackColor ?? Colors.transparent
+      ..style = PaintingStyle.fill;
+
+    final Rect leftTrackRect = Rect.fromLTRB(
+      trackRect.left + 1,
+      trackTop + 1,
+      thumbCenter.dx,
+      trackRect.bottom - 1,
+    );
+    final RRect leftRRect = RRect.fromRectAndRadius(leftTrackRect, Radius.circular(radius - 1));
+    context.canvas.drawRRect(leftRRect, activePaint);
+  }
+
+  @override
+  Rect getPreferredRect({
+    required RenderBox parentBox,
+    Offset offset = Offset.zero,
+    required SliderThemeData sliderTheme,
+    bool isEnabled = false,
+    bool isDiscrete = false,
+  }) {
+    final double trackHeight = sliderTheme.trackHeight ?? 4;
+    final double trackLeft = offset.dx;
+    final double trackTop = offset.dy + (parentBox.size.height - trackHeight) / 2;
+    final double trackWidth = parentBox.size.width;
+    return Rect.fromLTWH(trackLeft, trackTop, trackWidth, trackHeight);
   }
 }

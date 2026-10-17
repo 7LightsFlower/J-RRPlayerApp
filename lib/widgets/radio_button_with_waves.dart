@@ -84,10 +84,26 @@ class RadioButtonWithWaves extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
+          // ============ ЗАЛИВКА ПРОСТРАНСТВА (УЗКОЕ КОЛЬЦО) ============
+          IgnorePointer(
+            child: CustomPaint(
+              size: Size(buttonSize * 1.20, buttonSize * 1.20),
+              painter: _RingFillPainter(
+                innerRadius: buttonSize / 2, 
+                // Заливаем только половину пространства. 
+                // Если иконка buttonSize, а пунктир buttonSize * 1.20, 
+                // то половина пути — это 1.10.
+                outerRadius: (buttonSize * 1.10) / 2, 
+                color: hasConnection 
+                    ? AppColors.customStyle.withValues(alpha: isPlaying ? 0.15 : 0.05)
+                    : AppColors.customRed.withValues(alpha: 0.15),
+              ),
+            ),
+          ),
           // ============ ПУНКТИРНАЯ ОКРУЖНОСТЬ ============
           IgnorePointer(
             child: _RotatingDashedCircle(
-              size: buttonSize * 1.15, // Немного больше самой кнопки
+              size: buttonSize * 1.20, // Сделал чуть больше (было 1.15), чтобы края не слипались
               color: hasConnection ? AppColors.customStyle : AppColors.customRed,
               isPlaying: isPlaying,
             ),
@@ -154,7 +170,7 @@ class RadioButtonWithWaves extends StatelessWidget {
 }
 
 // =============================================================
-// ВРАЩАЮЩАЯСЯ ПУНКТИРНАЯ ОКРУЖНОСТЬ
+// ВРАЩАЮЩАЯСЯ ПУНКТИРНАЯ ОКРУЖНОСТЬ (С ПУЛЬСАЦИЕЙ)
 // =============================================================
 class _RotatingDashedCircle extends StatefulWidget {
   final double size;
@@ -172,37 +188,96 @@ class _RotatingDashedCircle extends StatefulWidget {
 }
 
 class _RotatingDashedCircleState extends State<_RotatingDashedCircle>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
+    with TickerProviderStateMixin {
+  late final AnimationController _rotationController;
+  late final AnimationController _scaleController;
+  late final Animation<double> _scaleAnimation;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
+
+    // 1. Контроллер вращения
+    _rotationController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 15), // Скорость вращения
-    )..repeat();
+      duration: const Duration(seconds: 30),
+    );
+
+    // 2. Контроллер пульсации
+    _scaleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+
+    _scaleAnimation = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: 1.25).chain(CurveTween(curve: Curves.easeOutBack)),
+        weight: 50,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.25, end: 1.0).chain(CurveTween(curve: Curves.easeInOut)),
+        weight: 50,
+      ),
+    ]).animate(_scaleController);
+
+    // Если при инициализации уже играет — запускаем
+    if (widget.isPlaying) {
+      _rotationController.repeat();
+      _scaleController.forward();
+    }
+  }
+
+  @override
+  void didUpdateWidget(_RotatingDashedCircle oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (!oldWidget.isPlaying && widget.isPlaying) {
+      // Включили: пульсация + вращение
+      _scaleController.forward(from: 0);
+      _rotationController.repeat();
+    } else if (oldWidget.isPlaying && !widget.isPlaying) {
+      // Выключили: останавливаем вращение
+      _rotationController.stop();
+      _scaleController.stop();
+      _scaleController.value = 0; // Сбрасываем масштаб до 1.0
+    }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _rotationController.dispose();
+    _scaleController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: _controller,
+      animation: Listenable.merge([_rotationController, _scaleController]),
       builder: (context, child) {
+        // Если не играет — бледная и не вращается (угол 0)
+        final double currentAngle = widget.isPlaying 
+            ? _rotationController.value * 2 * pi 
+            : 0.0;
+
+        // Масштаб применяем только если играет
+        final double currentScale = widget.isPlaying 
+            ? _scaleAnimation.value 
+            : 1.0;
+
+        // Прозрачность: 0.8 если играет, 0.2 если на паузе
+        final double opacity = widget.isPlaying ? 0.8 : 0.2;
+
         return Transform.rotate(
-          angle: _controller.value * 2 * pi,
-          child: CustomPaint(
-            size: Size(widget.size, widget.size),
-            painter: _DashedCirclePainter(
-              color: widget.color,
-              // Немного приглушаем яркость, если не играет
-              opacity: widget.isPlaying ? 0.8 : 0.4, 
+          angle: currentAngle,
+          child: Transform.scale(
+            scale: currentScale,
+            child: CustomPaint(
+              size: Size(widget.size, widget.size),
+              painter: _DashedCirclePainter(
+                color: widget.color,
+                opacity: opacity,
+              ),
             ),
           ),
         );
@@ -222,16 +297,21 @@ class _DashedCirclePainter extends CustomPainter {
     final Paint paint = Paint()
       ..color = color.withValues(alpha: opacity)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5
+      ..strokeWidth = 1.5 // Можно сделать чуть тоньше (например, 1.2), чтобы смотрелось аккуратнее
       ..strokeCap = StrokeCap.round;
 
     final double radius = (size.width / 2) - 2;
     final Offset center = Offset(size.width / 2, size.height / 2);
     
-    // Параметры пунктира
-    const int dashCount = 36; // Количество штрихов
+    // БЫЛО: const int dashCount = 36;
+    // СТАЛО: 
+    const int dashCount = 60; // Увеличили количество штрихов (чем больше, тем мельче пунктир)
+    
     const double dashAngle = (2 * pi) / dashCount;
-    const double dashSweep = dashAngle * 0.5; // 50% штрих, 50% пробел
+    
+    // БЫЛО: final double dashSweep = dashAngle * 0.5; 
+    // СТАЛО:
+    const double dashSweep = dashAngle * 0.3; // Штрих занимает 30% от шага, а 70% — это пробел
 
     for (int i = 0; i < dashCount; i++) {
       final double startAngle = i * dashAngle;
@@ -244,10 +324,50 @@ class _DashedCirclePainter extends CustomPainter {
       );
     }
   }
-
+  
   @override
   bool shouldRepaint(covariant _DashedCirclePainter oldDelegate) {
     return oldDelegate.color != color || oldDelegate.opacity != opacity;
+  }
+}
+
+// =============================================================
+// ПЕЙНТЕР ДЛЯ ЗАЛИВКИ КОЛЬЦА МЕЖДУ ИКОНКОЙ И ПУНКТИРОМ
+// =============================================================
+class _RingFillPainter extends CustomPainter {
+  final double innerRadius;
+  final double outerRadius;
+  final Color color;
+
+  _RingFillPainter({
+    required this.innerRadius,
+    required this.outerRadius,
+    required this.color,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    final center = Offset(size.width / 2, size.height / 2);
+
+    // Рисуем круг большего радиуса
+    final path = Path()
+      ..addOval(Rect.fromCircle(center: center, radius: outerRadius))
+      // Вырезаем внутренний круг (где находится иконка)
+      ..addOval(Rect.fromCircle(center: center, radius: innerRadius))
+      ..fillType = PathFillType.evenOdd; // Режим, при котором вырезается середина
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _RingFillPainter oldDelegate) {
+    return oldDelegate.color != color ||
+        oldDelegate.innerRadius != innerRadius ||
+        oldDelegate.outerRadius != outerRadius;
   }
 }
 
@@ -531,4 +651,5 @@ class _CrossLinePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+  
 }

@@ -156,11 +156,10 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           physics: const BouncingScrollPhysics(),
           child: Column(
             children: [
-              const SizedBox(height: 12),
               RadioButtonWithWaves(screenWidth: availableWidth),
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
               const AudioPlayerWidget(),
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
             ],
           ),
         );
@@ -192,7 +191,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                       minHeight: availableHeight,
                     ),
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         RadioButtonWithWaves(screenWidth: leftWidth),
