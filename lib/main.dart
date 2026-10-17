@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
+import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:provider/provider.dart';
 import 'services/audio_player_service.dart';
 import 'repositories/podcast_repository.dart';
@@ -7,6 +8,7 @@ import 'ui/screens/main_screen.dart';
 import 'ui/screens/podcast_list_screen.dart';
 
 Future<void> main() async {
+  JustAudioMediaKit.ensureInitialized();
   WidgetsFlutterBinding.ensureInitialized();
 
   runApp(

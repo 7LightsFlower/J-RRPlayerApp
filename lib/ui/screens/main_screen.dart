@@ -21,6 +21,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   bool _isInitialized = false;
   int _currentNavIndex = 0;
   late AnimationController _pulseController;
+  // ignore: unused_field
   late Animation<double> _pulseAnimation;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -157,8 +158,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
             children: [
               const SizedBox(height: 12),
               RadioButtonWithWaves(screenWidth: availableWidth),
-              const SizedBox(height: 12),
-              _buildLiveIndicator(),
               const SizedBox(height: 20),
               const AudioPlayerWidget(),
               const SizedBox(height: 20),
@@ -197,8 +196,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         RadioButtonWithWaves(screenWidth: leftWidth),
-                        const SizedBox(height: 12),
-                        _buildLiveIndicator(),
                       ],
                     ),
                   ),
@@ -378,50 +375,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ==================== LIVE INDICATOR ====================
-  Widget _buildLiveIndicator() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1C212B),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: AppColors.customStyle.withValues(alpha: 0.3),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AnimatedBuilder(
-            animation: _pulseAnimation,
-            builder: (context, child) {
-              return Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: AppColors.customStyle.withValues(
-                    alpha: _pulseAnimation.value,
-                  ),
-                  shape: BoxShape.circle,
-                ),
-              );
-            },
-          ),
-          const SizedBox(width: 8),
-          const Text(
-            'LIVE',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: AppFontSizes.small,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 1.5,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 // ==================== EQUALIZER PAINTER ====================

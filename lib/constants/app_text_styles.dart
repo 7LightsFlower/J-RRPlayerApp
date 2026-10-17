@@ -23,6 +23,9 @@ class AppFontSizes {
 
   /// 18 — заголовки трека, названия экранов, крупные акценты
   static const double large = 18.0;
+
+    /// 22 — название трека в плеере
+  static const double playerTitle = 22.0;
 }
 
 /// Готовые TextStyle-ы для типовых случаев.
@@ -174,10 +177,47 @@ class AppTextStyles {
     color: Colors.white,
   );
 
+  /// Дата новости (зелёная, жирная)
+  static const TextStyle newsDate = TextStyle(
+    fontSize: AppFontSizes.small,
+    fontWeight: FontWeight.w700,
+    letterSpacing: 1.0,
+    color: AppColors.customGreen,
+  );
+
   // ==================== КНОПКИ ====================
   /// Текст ElevatedButton / OutlinedButton
   static const TextStyle button = TextStyle(
     fontSize: AppFontSizes.medium,
     fontWeight: FontWeight.w600,
+  );
+
+    // ==================== ПЛЕЕР ====================
+  
+  // "СЕЙЧАС ИГРАЕТ" (маленький, разреженный, серый)
+  static TextStyle playerHeader = TextStyle(
+    fontFamily: 'Montserrat', // или 'Inter'
+    fontSize: AppFontSizes.small, // 10
+    fontWeight: FontWeight.w700,
+    letterSpacing: 1.5, // Широкое расстояние между буквами
+    color: AppColors.customWhite.withValues(alpha: 0.5),
+  );
+
+  // Название трека (крупное, жирное, белое)
+  static TextStyle playerTrackTitle = const TextStyle(
+    fontFamily: 'Montserrat', // или 'Inter'
+    fontSize: AppFontSizes.playerTitle, // 22
+    fontWeight: FontWeight.w800, // Очень жирный (ExtraBold)
+    letterSpacing: -0.5, // Немного сжимаем буквы для плотности
+    color: AppColors.customWhite,
+    height: 1.1,
+  );
+
+  // Исполнитель (средний, серый)
+  static TextStyle playerTrackArtist = TextStyle(
+    fontFamily: 'Montserrat',
+    fontSize: AppFontSizes.medium, // 14
+    fontWeight: FontWeight.w400,
+    color: AppColors.customWhite.withValues(alpha: 0.6),
   );
 }

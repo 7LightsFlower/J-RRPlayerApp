@@ -90,7 +90,7 @@ class _PodcastItemState extends State<PodcastItem> {
 
   // ==================== COVER IMAGE ====================
   Widget _buildCover() {
-    const double size = 80.0;
+    const double size = 76.0;
     if (widget.podcast.imageUrl != null &&
         widget.podcast.imageUrl!.isNotEmpty) {
       return ClipRRect(
@@ -322,7 +322,7 @@ class _PodcastItemState extends State<PodcastItem> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -347,7 +347,7 @@ class _PodcastItemState extends State<PodcastItem> {
                       inactiveTrackColor: const Color(0xFF2A3242),
                       thumbColor: AppColors.customStyle,
                       overlayColor: AppColors.customStyle.withValues(alpha: 0.15),
-                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
+                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 4),
                       overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
                     ),
                     child: Slider(
@@ -412,7 +412,7 @@ class _PodcastItemState extends State<PodcastItem> {
     required bool isBuffering,
     required VoidCallback onTap,
   }) {
-    const double size = 52.0;
+    const double size = 48.0;
 
     return SizedBox(
       width: size,

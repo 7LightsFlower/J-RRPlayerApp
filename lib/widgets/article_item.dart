@@ -67,15 +67,18 @@ class ArticleItem extends StatelessWidget {
 
                       const SizedBox(height: 8),
 
-                      // Date + category badge row
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
+                      // Date + category badge column
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             article.date,
                             style: AppTextStyles.smallMuted,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          const Spacer(),
+                          const SizedBox(height: 4),
                           _buildCategoryBadge(category),
                         ],
                       ),
@@ -140,9 +143,13 @@ class ArticleItem extends StatelessWidget {
           size: 14,
         ),
         const SizedBox(width: 4),
-        Text(
-          category.toUpperCase(),
-          style: AppTextStyles.smallAccent.copyWith(letterSpacing: 0.6),
+        Flexible(
+          child: Text(
+            category.toUpperCase(),
+            style: AppTextStyles.smallAccent.copyWith(letterSpacing: 0.6),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       ],
     );
