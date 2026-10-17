@@ -428,10 +428,18 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                   // ---- TRACK INFO ----
                   Expanded(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Track title
+                        Text(
+                          'Сейчас играет',
+                          style: AppTextStyles.small.copyWith(
+                            color: AppColors.customWhite.withValues(alpha: 0.5),
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+
                         ValueListenableBuilder<AudioMetadata?>(
                           valueListenable: _metadataNotifier,
                           builder: (_, metadata, __) {
@@ -440,16 +448,15 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                               title,
                               style: AppTextStyles.playerTrackTitle.copyWith(
                                 fontSize: isCompact ? 18.0 : 22.0,
+                                fontWeight: FontWeight.w400,
                               ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
                             );
                           },
                         ),
                         const SizedBox(height: 4),
 
-                        // Artist
                         ValueListenableBuilder<AudioMetadata?>(
                           valueListenable: _metadataNotifier,
                           builder: (_, metadata, __) {
@@ -458,7 +465,6 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                               style: AppTextStyles.playerTrackArtist,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
                             );
                           },
                         ),
@@ -468,7 +474,6 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                 ],
               ),
             ),
-
             SizedBox(height: largeSpacing),
 
             // ==================== VOLUME SLIDER ====================
@@ -609,39 +614,15 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     return Container(
       color: AppColors.appBarBackground, // Темный фон
       child: Center(
-        child: ColorFiltered(
-          // Перекрашиваем всю картинку в customGrey, сохраняя форму
-          colorFilter: ColorFilter.mode(
-            AppColors.customGrey.withValues(alpha: 0.5), // Делаем бледнее (опционально)
-            BlendMode.srcIn,
-          ),
-          child: Image.asset(
-            'assets/images/default_cover.png',
-            width: 60,
-            height: 60,
-            fit: BoxFit.contain,
-          ),
-        ),
-      ),
-    );
-  }
-  
-  // Заглушка для подкаста (если у эпизода вообще нет картинки)
-  Widget _buildDefaultCover() {
-    return Container(
-      color: AppColors.cardBackground,
-      child: Center(
-        child: ColorFiltered(
-          colorFilter: const ColorFilter.matrix(<double>[
-            0.2126, 0.7152, 0.0722, 0, 0,
-            0.2126, 0.7152, 0.0722, 0, 0,
-            0.2126, 0.7152, 0.0722, 0, 0,
-            0,      0,      0,      1, 0,
-          ]),
-          child: Opacity(
-            opacity: 0.5, // Для подкастов можно сделать чуть ярче
+        child: RepaintBoundary( // Защита от мерцания
+          child: ColorFiltered(
+            // Перекрашиваем красный в бледно-бирюзовый (или AppColors.customGrey)
+            colorFilter: ColorFilter.mode(
+              AppColors.customStyle.withValues(alpha: 0.5), 
+              BlendMode.color, // <-- Используем BlendMode.color
+            ),
             child: Image.asset(
-              'assets/images/default_cover.png', // Та же картинка
+              'assets/images/default_cover.png', // Ваша красная PNG
               width: 60,
               height: 60,
               fit: BoxFit.contain,
@@ -651,7 +632,28 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
       ),
     );
   }
-
+  // Заглушка для подкаста (если у эпизода вообще нет картинки)
+  Widget _buildDefaultCover() {
+    return Container(
+      color: AppColors.cardBackground,
+      child: Center(
+        child: RepaintBoundary(
+          child: ColorFiltered(
+            colorFilter: ColorFilter.mode(
+              AppColors.customGrey.withValues(alpha: 0.6), // Серый цвет
+              BlendMode.color, // <-- Используем BlendMode.color
+            ),
+            child: Image.asset(
+              'assets/images/default_cover.png', // Ваша красная PNG
+              width: 60,
+              height: 60,
+              fit: BoxFit.contain,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
   Future<void> _playNextPodcast() async {
     try {
       await _audioService.playNextPodcast();
