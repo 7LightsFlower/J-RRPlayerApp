@@ -7,7 +7,7 @@ import 'package:jrrplayerapp/widgets/audio_player_widget.dart';
 import 'package:jrrplayerapp/constants/strings.dart';
 import 'package:jrrplayerapp/ui/screens/enlarged_tabs_screen.dart';
 import 'package:jrrplayerapp/services/audio_player_service.dart';
-import 'package:jrrplayerapp/widgets/radio_button_with_waves.dart';
+import 'package:jrrplayerapp/widgets/animated_radio_button.dart';
 import 'package:jrrplayerapp/widgets/app_bottom_nav.dart';
 
 class MainScreen extends StatefulWidget {
@@ -156,7 +156,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           physics: const BouncingScrollPhysics(),
           child: Column(
             children: [
-              RadioButtonWithWaves(screenWidth: availableWidth),
+              AnimatedRadioButton(screenWidth: availableWidth* 0.75),
               const SizedBox(height: 12),
               const AudioPlayerWidget(),
               const SizedBox(height: 12),
@@ -194,7 +194,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                       mainAxisAlignment: MainAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        RadioButtonWithWaves(screenWidth: leftWidth),
+                        AnimatedRadioButton(screenWidth: leftWidth),
                       ],
                     ),
                   ),

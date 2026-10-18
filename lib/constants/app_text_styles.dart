@@ -25,7 +25,7 @@ class AppFontSizes {
   static const double large = 18.0;
 
     /// 22 — название трека в плеере
-  static const double playerTitle = 22.0;
+  static const double playerTitle = 20.0;
 }
 
 /// Готовые TextStyle-ы для типовых случаев.
@@ -206,7 +206,7 @@ class AppTextStyles {
   // Название трека (крупное, жирное, белое)
   static TextStyle playerTrackTitle = const TextStyle(
     fontFamily: 'Montserrat', // или 'Inter'
-    fontSize: AppFontSizes.playerTitle, // 22
+    fontSize: AppFontSizes.playerTitle, // 20
     fontWeight: FontWeight.w800, // Очень жирный (ExtraBold)
     letterSpacing: -0.5, // Немного сжимаем буквы для плотности
     color: AppColors.customWhite,
@@ -216,7 +216,7 @@ class AppTextStyles {
   // Исполнитель (средний, серый)
   static TextStyle playerTrackArtist = TextStyle(
     fontFamily: 'Montserrat',
-    fontSize: AppFontSizes.medium, // 14
+    fontSize: AppFontSizes.smallMedium, // 12
     fontWeight: FontWeight.w400,
     color: AppColors.customWhite.withValues(alpha: 0.6),
   );

@@ -433,7 +433,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          'Сейчас играет',
+                          'СЕЙЧАС ИГРАЕТ',
                           style: AppTextStyles.small.copyWith(
                             color: AppColors.customWhite.withValues(alpha: 0.5),
                             letterSpacing: 1.2,
