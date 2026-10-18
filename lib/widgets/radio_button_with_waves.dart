@@ -117,7 +117,7 @@ class RadioButtonWithWaves extends StatelessWidget {
           // ============ ПЕРЕЧЁРКНУТО ПРИ ОБРЫВЕ СЕТИ ============
           if (!hasConnection && !isBuffering)
             _CrossLine(
-              size: buttonSize * 0.75,
+              size: buttonSize * 0.5,
               verticalOffset: -buttonSize * 0.15,
             ),
 

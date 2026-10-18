@@ -56,6 +56,7 @@ class AudioPlayerHandler extends BaseAudioHandler {
       final packageInfo = await PackageInfo.fromPlatform();
       _androidPackageName = packageInfo.packageName;
       debugPrint('📦 Android packageName: $_androidPackageName');
+       _onDefaultCoverReady();          // ← обновит initial MediaItem на android.resource://…
     } else if (defaultTargetPlatform == TargetPlatform.iOS) {
       await _initLocalDefaultCover();
     }

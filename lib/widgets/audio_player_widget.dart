@@ -264,9 +264,16 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
 
       // Обновляем метаданные ТОЛЬКО если они реально изменились
       final newMetadata = _audioService.currentMetadata;
-      if (_metadataNotifier.value != newMetadata) {
+      final oldArt = _metadataNotifier.value?.artUrl;
+      final newArt = newMetadata?.artUrl;
+
+      if (_metadataNotifier.value?.title != newMetadata?.title ||
+          _metadataNotifier.value?.artist != newMetadata?.artist ||
+          oldArt != newArt) {
         _metadataNotifier.value = newMetadata;
-        _imageUpdateNotifier.value++; // <--- Оставляем ТОЛЬКО здесь
+        if (oldArt != newArt) {
+          _imageUpdateNotifier.value++;
+        }
       }
     }
   }
@@ -292,6 +299,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     }
   }
 
+  String? _lastArtUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -554,24 +562,35 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
       ),
     );
   }
+
   Widget _buildCoverImage(AudioMetadata? metadata, int imageVersion) {
-    // 1. Если это подкаст, пытаемся взять его обложку
+    // Podcast
     if (_audioService.isPodcastMode && _audioService.currentEpisode != null) {
       final episode = _audioService.currentEpisode!;
       final imageUrl = episode.imageUrl ?? episode.channelImageUrl;
-      
       if (imageUrl != null && imageUrl.isNotEmpty) {
+        _lastArtUrl = imageUrl;
         return _buildNetworkImage(imageUrl, imageVersion);
       }
-      return _buildDefaultCover(); // Заглушка для подкаста
+      return _buildDefaultCover();
     }
 
-    // 2. Если это радио, и метаданные (название трека/обложка) уже пришли
-    if (metadata?.artUrl != null && metadata!.artUrl.isNotEmpty) {
-      return _buildNetworkImage(metadata.artUrl, imageVersion);
+    // Radio: только настоящий URL (http/https) считаем "настоящей" обложкой
+    final artUrl = metadata?.artUrl;
+    final isRealUrl = artUrl != null &&
+        (artUrl.startsWith('http://') || artUrl.startsWith('https://'));
+
+    if (isRealUrl) {
+      _lastArtUrl = artUrl;
+      return _buildNetworkImage(artUrl, imageVersion);
     }
 
-    // 3. Если это радио, но метаданные ещё не пришли
+    // Дефолтная обложка / metadata == null → «липкая» последняя реальная
+    if (_lastArtUrl != null) {
+      return _buildNetworkImage(_lastArtUrl!, imageVersion);
+    }
+
+    // Совсем нет ничего (первый запуск) → asset
     return _buildRadioPlaceholder();
   }
 
@@ -579,37 +598,25 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     return Image.network(
       imageUrl,
       fit: BoxFit.cover,
-      key: ValueKey('$imageUrl$imageVersion'),
+      key: ValueKey(imageUrl),          // ← без '$'
+      gaplessPlayback: true,
       cacheWidth: 200,
       filterQuality: FilterQuality.low,
       errorBuilder: (context, error, stackTrace) {
-        return _audioService.isPodcastMode 
-            ? _buildDefaultCover() 
+        return _audioService.isPodcastMode
+            ? _buildDefaultCover()
             : _buildRadioPlaceholder();
       },
       loadingBuilder: (context, child, loadingProgress) {
         if (loadingProgress == null) return child;
-        return Container(
-          color: AppColors.appBarBackground,
-          child: Center(
-            child: SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: AppColors.customStyle,
-                value: loadingProgress.expectedTotalBytes != null
-                    ? loadingProgress.cumulativeBytesLoaded /
-                        loadingProgress.expectedTotalBytes!
-                    : null,
-              ),
-            ),
-          ),
-        );
+        // Пока грузится новая — держим последнюю известную
+        if (_lastArtUrl != null && _lastArtUrl != imageUrl) {
+          return _buildNetworkImage(_lastArtUrl!, 0);
+        }
+        return const SizedBox.expand();
       },
     );
   }
-
   // Бледная иконка радио для состояния "нет метаданных"
   // Бледная (серая) иконка радио для состояния "нет метаданных"
   Widget _buildRadioPlaceholder() {
