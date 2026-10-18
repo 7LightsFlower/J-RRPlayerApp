@@ -262,10 +262,11 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
         _durationNotifier.value = duration;
       }
 
+      // Обновляем метаданные ТОЛЬКО если они реально изменились
       final newMetadata = _audioService.currentMetadata;
       if (_metadataNotifier.value != newMetadata) {
         _metadataNotifier.value = newMetadata;
-         _imageUpdateNotifier.value++;
+        _imageUpdateNotifier.value++; // <--- Оставляем ТОЛЬКО здесь
       }
     }
   }
@@ -612,48 +613,34 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   // Бледная (серая) иконка радио для состояния "нет метаданных"
   Widget _buildRadioPlaceholder() {
     return Container(
-      color: AppColors.appBarBackground, // Темный фон
+      color: AppColors.appBarBackground,
       child: Center(
-        child: RepaintBoundary( // Защита от мерцания
-          child: ColorFiltered(
-            // Перекрашиваем красный в бледно-бирюзовый (или AppColors.customGrey)
-            colorFilter: ColorFilter.mode(
-              AppColors.customStyle.withValues(alpha: 0.5), 
-              BlendMode.color, // <-- Используем BlendMode.color
-            ),
-            child: Image.asset(
-              'assets/images/default_cover.png', // Ваша красная PNG
-              width: 60,
-              height: 60,
-              fit: BoxFit.contain,
-            ),
-          ),
+        child: Image.asset(
+          'assets/images/default_cover.png', 
+          width: 60,
+          height: 60,
+          fit: BoxFit.contain,
+          gaplessPlayback: true, // Защита от мерцания при обновлении
         ),
       ),
     );
   }
-  // Заглушка для подкаста (если у эпизода вообще нет картинки)
+
   Widget _buildDefaultCover() {
     return Container(
       color: AppColors.cardBackground,
       child: Center(
-        child: RepaintBoundary(
-          child: ColorFiltered(
-            colorFilter: ColorFilter.mode(
-              AppColors.customGrey.withValues(alpha: 0.6), // Серый цвет
-              BlendMode.color, // <-- Используем BlendMode.color
-            ),
-            child: Image.asset(
-              'assets/images/default_cover.png', // Ваша красная PNG
-              width: 60,
-              height: 60,
-              fit: BoxFit.contain,
-            ),
-          ),
+        child: Image.asset(
+          'assets/images/default_cover.png', 
+          width: 60,
+          height: 60,
+          fit: BoxFit.contain,
+          gaplessPlayback: true,
         ),
       ),
     );
   }
+
   Future<void> _playNextPodcast() async {
     try {
       await _audioService.playNextPodcast();
