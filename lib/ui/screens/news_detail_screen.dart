@@ -19,8 +19,8 @@ class NewsDetailScreen extends StatelessWidget {
         elevation: 0,
         title: Text(
           news.title,
-          style: AppTextStyles.compactLarge.copyWith(
-            fontWeight: FontWeight.w400,   // ← AppBar без жирного
+          style: AppTextStyles.compact.copyWith(
+            fontWeight: FontWeight.normal,   // ← AppBar без жирного
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -45,7 +45,7 @@ class NewsDetailScreen extends StatelessWidget {
                   width: double.infinity,
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => Container(
-                    height: 200,
+                    height: 120,
                     color: AppColors.surfaceMuted,
                     child: const Center(
                       child: Icon(
