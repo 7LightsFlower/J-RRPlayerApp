@@ -613,14 +613,14 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   // Бледная (серая) иконка радио для состояния "нет метаданных"
   Widget _buildRadioPlaceholder() {
     return Container(
-      color: AppColors.appBarBackground,
+      // Убрали черный цвет фона AppColors.appBarBackground, 
+      // теперь если картинка прозрачная, будет виден фон плеера.
+      color: Colors.transparent, 
       child: Center(
         child: Image.asset(
           'assets/images/default_cover.png', 
-          width: 60,
-          height: 60,
           fit: BoxFit.contain,
-          gaplessPlayback: true, // Защита от мерцания при обновлении
+          gaplessPlayback: true, 
         ),
       ),
     );
@@ -628,12 +628,10 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
 
   Widget _buildDefaultCover() {
     return Container(
-      color: AppColors.cardBackground,
+      color: AppColors.cardBackground, // Для подкастов оставили темный фон
       child: Center(
         child: Image.asset(
           'assets/images/default_cover.png', 
-          width: 60,
-          height: 60,
           fit: BoxFit.contain,
           gaplessPlayback: true,
         ),
