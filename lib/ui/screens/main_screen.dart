@@ -156,7 +156,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           physics: const BouncingScrollPhysics(),
           child: Column(
             children: [
-              AnimatedRadioButton(screenWidth: availableWidth* 0.8),
+              AnimatedRadioButton(screenWidth: availableWidth),
               const SizedBox(height: 12),
               const AudioPlayerWidget(),
               const SizedBox(height: 12),

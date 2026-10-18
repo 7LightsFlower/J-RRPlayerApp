@@ -24,8 +24,8 @@ class AppFontSizes {
   /// 18 — заголовки трека, названия экранов, крупные акценты
   static const double large = 18.0;
 
-    /// 22 — название трека в плеере
-  static const double playerTitle = 20.0;
+  /// 18 — название трека в плеере
+  static const double playerTitle = 18.0;
 }
 
 /// Готовые TextStyle-ы для типовых случаев.
@@ -141,7 +141,7 @@ class AppTextStyles {
   /// Заголовок в компактных списках / карточках
   static const TextStyle compactLarge = TextStyle(
     fontSize: AppFontSizes.compactLarge,
-    fontWeight: FontWeight.w600,
+    fontWeight: FontWeight.normal,
     color: AppColors.customWhite,
     height: 1.2,
   );
@@ -179,10 +179,10 @@ class AppTextStyles {
 
   /// Дата новости (зелёная, жирная)
   static const TextStyle newsDate = TextStyle(
-    fontSize: AppFontSizes.small,
-    fontWeight: FontWeight.w700,
+    fontSize: AppFontSizes.medium,
+    fontWeight: FontWeight.w600,
     letterSpacing: 1.0,
-    color: AppColors.customGreen,
+    color: AppColors.customStyle,
   );
 
   // ==================== КНОПКИ ====================
@@ -206,7 +206,7 @@ class AppTextStyles {
   // Название трека (крупное, жирное, белое)
   static TextStyle playerTrackTitle = const TextStyle(
     fontFamily: 'Montserrat', // или 'Inter'
-    fontSize: AppFontSizes.playerTitle, // 20
+    fontSize: AppFontSizes.playerTitle, // 18
     fontWeight: FontWeight.w800, // Очень жирный (ExtraBold)
     letterSpacing: -0.5, // Немного сжимаем буквы для плотности
     color: AppColors.customWhite,
