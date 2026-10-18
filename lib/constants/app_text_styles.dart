@@ -10,7 +10,7 @@ class AppFontSizes {
   static const double small = 10.0;
 
   /// 12 — табы (верхние), подписи нижней навигации
-  static const double tab = 12.0;
+  static const double tab = 10.0;
 
   /// 12 — названия подкастов / эпизодов, компактные заголовки
   static const double smallMedium = 12.0;
@@ -179,7 +179,7 @@ class AppTextStyles {
 
   /// Дата новости (зелёная, жирная)
   static const TextStyle newsDate = TextStyle(
-    fontSize: AppFontSizes.medium,
+    fontSize: AppFontSizes.small,
     fontWeight: FontWeight.w600,
     letterSpacing: 1.0,
     color: AppColors.customStyle,
@@ -198,7 +198,7 @@ class AppTextStyles {
   static TextStyle playerHeader = TextStyle(
     fontFamily: 'Montserrat', // или 'Inter'
     fontSize: AppFontSizes.small, // 10
-    fontWeight: FontWeight.w700,
+    fontWeight: FontWeight.w600,
     letterSpacing: 1.5, // Широкое расстояние между буквами
     color: AppColors.customWhite.withValues(alpha: 0.5),
   );
@@ -207,7 +207,7 @@ class AppTextStyles {
   static TextStyle playerTrackTitle = const TextStyle(
     fontFamily: 'Montserrat', // или 'Inter'
     fontSize: AppFontSizes.playerTitle, // 18
-    fontWeight: FontWeight.w800, // Очень жирный (ExtraBold)
+    fontWeight: FontWeight.w600, // Очень жирный (ExtraBold)
     letterSpacing: -0.5, // Немного сжимаем буквы для плотности
     color: AppColors.customWhite,
     height: 1.1,

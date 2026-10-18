@@ -544,6 +544,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                       },
                     ),
                   ),
+                  const SizedBox(width: 40),
                 ],
               ),
             ),

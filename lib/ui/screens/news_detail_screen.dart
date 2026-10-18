@@ -19,7 +19,7 @@ class NewsDetailScreen extends StatelessWidget {
         elevation: 0,
         title: Text(
           news.title,
-          style: AppTextStyles.appBarTitle.copyWith(
+          style: AppTextStyles.compactLarge.copyWith(
             fontWeight: FontWeight.w400,   // ← AppBar без жирного
           ),
           maxLines: 1,
