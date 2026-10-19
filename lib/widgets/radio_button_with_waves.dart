@@ -166,7 +166,7 @@ class RadioButtonWithWaves extends StatelessWidget {
   }
 
   Color _getWaveColor(bool hasConnection) =>
-      hasConnection ? AppColors.customGreen : AppColors.customRed;
+      hasConnection ? AppColors.customWhite : AppColors.customRed;
 }
 
 // =============================================================
@@ -483,7 +483,7 @@ class _GlowingIconButtonState extends State<_GlowingIconButton>
               CircularProgressIndicator(
                 valueColor: AlwaysStoppedAnimation<Color>(
                   widget.hasConnection
-                      ? AppColors.customGreen
+                      ? AppColors.customWhite
                       : AppColors.customRed,
                 ),
                 strokeWidth: 2,

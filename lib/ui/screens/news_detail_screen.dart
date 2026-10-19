@@ -34,7 +34,7 @@ class NewsDetailScreen extends StatelessWidget {
             Text(
               news.date,
               style: AppTextStyles.small
-                  .copyWith(color: AppColors.customGreen),
+                  .copyWith(color: AppColors.customStyle),
             ),
             const SizedBox(height: 8),
             if (news.imageUrl.isNotEmpty) ...[

@@ -326,7 +326,7 @@ class _StaticIconButton extends StatelessWidget {
               CircularProgressIndicator(
                 valueColor: AlwaysStoppedAnimation<Color>(
                   hasConnection
-                      ? AppColors.customGreen
+                      ? AppColors.customStyle
                       : AppColors.customRed,
                 ),
                 strokeWidth: 2,

@@ -217,7 +217,7 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
               ElevatedButton(
                 onPressed: _loadNews,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.customGreen,
+                  backgroundColor: AppColors.customStyle,
                   foregroundColor: AppColors.customWhite,
                 ),
                 child: const Text(
@@ -263,12 +263,12 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
       backgroundColor: AppColors.customBlack,
       body: RefreshIndicator(
         onRefresh: _loadNews,
-        color: AppColors.customGreen,
+        color: AppColors.customStyle,
         child: _isLoading
             ? const Center(
                 child: CircularProgressIndicator(
                   valueColor:
-                      AlwaysStoppedAnimation<Color>(AppColors.customGreen),
+                      AlwaysStoppedAnimation<Color>(AppColors.customStyle),
                 ),
               )
             : _error.isNotEmpty
