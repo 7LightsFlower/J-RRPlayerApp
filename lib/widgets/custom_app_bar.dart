@@ -37,12 +37,7 @@ class CustomAppBar extends StatelessWidget {
             children: [
               const Text(
                 AppStrings.appName,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: AppFontSizes.medium,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.2,
-                ),
+                style: AppTextStyles.brandTitle,
               ),
               const SizedBox(width: 8),
               Icon(

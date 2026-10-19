@@ -518,16 +518,13 @@ class _FeaturedArticleCard extends StatelessWidget {
                 children: [
                   Text(
                     (article.category ?? 'Статья').toUpperCase(),
-                    style: AppTextStyles.smallAccent.copyWith(letterSpacing: 1),
+                    style: AppTextStyles.smallAccent,
                   ),
                   const SizedBox(height: 6),
                   Text(
                     article.title,
-                    style: AppTextStyles.mediumBold.copyWith(
-                      color: Colors.white,
-                      height: 1.2,
-                    ),
-                    maxLines: 2,
+                    style: AppTextStyles.mediumBold,
+                    maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 8),

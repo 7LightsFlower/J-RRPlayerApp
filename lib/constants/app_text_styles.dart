@@ -6,10 +6,10 @@ import 'package:jrrplayerapp/constants/app_colors.dart';
 class AppFontSizes {
   AppFontSizes._();
 
-  /// 10 — мелкие подписи, бейджи, "LIVE", подписи под иконками навигации
+  /// 10 — мелкие подписи, бейджи, подписи под иконками навигации
   static const double small = 10.0;
 
-  /// 12 — табы (верхние), подписи нижней навигации
+  /// 10 — табы, подписи нижней навигации
   static const double tab = 10.0;
 
   /// 12 — названия подкастов / эпизодов, компактные заголовки
@@ -137,6 +137,21 @@ class AppTextStyles {
     color: AppColors.customStyle,
   );
 
+  /// Заголовок бренда в AppBar (РАДИО J-ROCK)
+  static const TextStyle brandTitle = TextStyle(
+    fontSize: AppFontSizes.medium,
+    fontWeight: FontWeight.w700,
+    letterSpacing: 1.2,
+    color: AppColors.customWhite,
+  );
+
+  /// Основной читаемый текст с межстрочным (абзацы, описания)
+  static TextStyle mediumReadable = TextStyle(
+    fontSize: AppFontSizes.medium,
+    color: AppColors.customWhite.withValues(alpha: 0.7),
+    height: 1.5,
+  );
+
   // ==================== 16 — КОМПАКТНЫЙ КРУПНЫЙ ====================
   /// Заголовок в компактных списках / карточках
   static const TextStyle compactLarge = TextStyle(
@@ -177,7 +192,7 @@ class AppTextStyles {
     color: Colors.white,
   );
 
-  /// Дата новости (зелёная, жирная)
+  /// Дата новости (акцентная) 
   static const TextStyle newsDate = TextStyle(
     fontSize: AppFontSizes.small,
     fontWeight: FontWeight.w600,

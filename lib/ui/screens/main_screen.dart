@@ -83,7 +83,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
             final bool isWide = screen.width > screen.height;
 
             if (isWide) {
-              // Landscape → Row: rail слева, контент справа
+              // Landscape → Row: rail справа, контент слева
               return Row(
                 children: [
                   Expanded(
@@ -91,7 +91,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                       children: [
                         CustomAppBar(
                           leadingIcon: Icons.menu,
-                          onLeadingTap: () => _scaffoldKey.currentState?.openDrawer(),
+                          onLeadingTap: () =>
+                              _scaffoldKey.currentState?.openDrawer(),
                         ),
                         Expanded(
                           child: OrientationBuilder(
@@ -109,26 +110,28 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => EnlargedTabsScreen(initialIndex: index),
+                          builder: (_) =>
+                              EnlargedTabsScreen(initialIndex: index),
                         ),
                       );
                     },
                   ),
-
                 ],
               );
             }
 
-            // Portrait → Column: всё как было, nav внизу
+            // Portrait → Column: nav внизу
             return Column(
               children: [
                 CustomAppBar(
                   leadingIcon: Icons.menu,
-                  onLeadingTap: () => _scaffoldKey.currentState?.openDrawer(),
+                  onLeadingTap: () =>
+                      _scaffoldKey.currentState?.openDrawer(),
                 ),
                 Expanded(
                   child: OrientationBuilder(
-                    builder: (context, orientation) => _buildPortraitLayout(),
+                    builder: (context, orientation) =>
+                        _buildPortraitLayout(),
                   ),
                 ),
                 AppBottomNav(
@@ -138,7 +141,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => EnlargedTabsScreen(initialIndex: index),
+                        builder: (_) =>
+                            EnlargedTabsScreen(initialIndex: index),
                       ),
                     );
                   },
@@ -161,7 +165,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           physics: const BouncingScrollPhysics(),
           child: Column(
             children: [
-              AnimatedRadioButton(screenWidth: availableWidth*0.9),
+              AnimatedRadioButton(screenWidth: availableWidth * 0.9),
               const SizedBox(height: 12),
               const AudioPlayerWidget(),
               const SizedBox(height: 12),
@@ -185,16 +189,14 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // LEFT: logo + live indicator, wrapped in scroll so it never overflows
+              // LEFT: logo
               SizedBox(
                 width: leftWidth,
                 height: availableHeight,
                 child: SingleChildScrollView(
                   physics: const ClampingScrollPhysics(),
                   child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: availableHeight,
-                    ),
+                    constraints: BoxConstraints(minHeight: availableHeight),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
@@ -206,7 +208,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                 ),
               ),
               const SizedBox(width: 16),
-              // RIGHT: audio player, always scrollable + bounded
+              // RIGHT: player
               const Expanded(
                 child: SingleChildScrollView(
                   physics: BouncingScrollPhysics(),
@@ -219,8 +221,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       },
     );
   }
-  // ==================== APP BAR ====================
-
 
   // ==================== APP DRAWER ====================
   Widget _buildAppDrawer() {
@@ -239,11 +239,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                 SizedBox(height: 8),
                 Text(
                   AppStrings.radioName,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: AppFontSizes.medium,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: AppTextStyles.mediumBold,
                 ),
               ],
             ),
@@ -252,7 +248,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
             leading: const Icon(Icons.info_outline, color: Colors.white70),
             title: const Text(
               'О радио',
-              style: TextStyle(color: Colors.white),
+              style: AppTextStyles.medium,
             ),
             onTap: () {
               Navigator.pop(context);
@@ -268,7 +264,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
             leading: const Icon(Icons.settings, color: Colors.white70),
             title: const Text(
               'Настройки',
-              style: TextStyle(color: Colors.white),
+              style: AppTextStyles.medium,
             ),
             onTap: () {
               Navigator.pop(context);
@@ -332,7 +328,7 @@ class AboutScreen extends StatelessWidget {
         backgroundColor: AppColors.appBarBackground,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: const Text('О радио'),
+        title: const Text('О радио', style: AppTextStyles.appBarTitle),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -365,33 +361,31 @@ class AboutScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
+
+            // Название радио — крупный заголовок
             const Text(
               AppStrings.appName,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: AppFontSizes.large,
-                fontWeight: FontWeight.bold,
-              ),
+              style: AppTextStyles.large,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
-            const Text(
+
+            // Версия — приглушённый
+            Text(
               'Версия 1.0.0',
-              style: TextStyle(color: Colors.white54, fontSize: AppFontSizes.medium),
+              style: AppTextStyles.mediumMuted,
             ),
             const SizedBox(height: 32),
-            const Text(
+
+            // Описание — читаемый абзац
+            Text(
               'Слушать, думать, жить\n'
               'Человеку нужно место, где можно остановиться и подумать.'
               'Без готовых ответов, правильных слов и необходимости соглашаться.'
               'Здесь музыка соседствует с разговорами о человеке, Библии, истории, науке и жизни. '
               'О том, что действительно важно, когда остаёшься один на один с собой. '
               'Можно просто слушать. А можно вместе искать свои ответы. ',
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: AppFontSizes.medium,
-                height: 1.5,
-              ),
+              style: AppTextStyles.mediumMuted.copyWith(height: 1.5),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
@@ -419,12 +413,12 @@ class AboutScreen extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: const TextStyle(color: Colors.white54, fontSize: AppFontSizes.small),
+                style: AppTextStyles.smallMuted,
               ),
               const SizedBox(height: 2),
               Text(
                 value,
-                style: const TextStyle(color: Colors.white, fontSize: AppFontSizes.medium),
+                style: AppTextStyles.medium,
               ),
             ],
           ),
@@ -456,7 +450,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         backgroundColor: AppColors.appBarBackground,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: const Text('Настройки'),
+        title: const Text('Настройки', style: AppTextStyles.appBarTitle),
       ),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 8),
@@ -469,11 +463,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             title: const Text(
               'Автовоспроизведение',
-              style: TextStyle(color: Colors.white),
+              style: AppTextStyles.medium,
             ),
-            subtitle: const Text(
+            subtitle: Text(
               'Запускать радио при открытии приложения',
-              style: TextStyle(color: Colors.white54, fontSize: AppFontSizes.small),
+              style: AppTextStyles.smallMuted,
             ),
             value: _autoPlayOnStart,
             activeThumbColor: AppColors.customStyle,
@@ -490,11 +484,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             title: const Text(
               'Высокое качество звука',
-              style: TextStyle(color: Colors.white),
+              style: AppTextStyles.medium,
             ),
-            subtitle: const Text(
+            subtitle: Text(
               'Использовать поток с более высоким битрейтом',
-              style: TextStyle(color: Colors.white54, fontSize: AppFontSizes.small),
+              style: AppTextStyles.smallMuted,
             ),
             value: _highQualityStream,
             activeThumbColor: AppColors.customStyle,
@@ -519,12 +513,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const SizedBox(width: 12),
                     const Text(
                       'Громкость по умолчанию',
-                      style: TextStyle(color: Colors.white),
+                      style: AppTextStyles.medium,
                     ),
                     const Spacer(),
                     Text(
                       '${(_defaultVolume * 100).round()}%',
-                      style: const TextStyle(color: Colors.white54),
+                      style: AppTextStyles.mediumMuted,
                     ),
                   ],
                 ),
@@ -557,11 +551,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             title: const Text(
               'Показывать уведомления',
-              style: TextStyle(color: Colors.white),
+              style: AppTextStyles.medium,
             ),
-            subtitle: const Text(
+            subtitle: Text(
               'Отображать информацию о треке в шторке',
-              style: TextStyle(color: Colors.white54, fontSize: AppFontSizes.small),
+              style: AppTextStyles.smallMuted,
             ),
             value: _showNotifications,
             activeThumbColor: AppColors.customStyle,
@@ -580,11 +574,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             title: const Text(
               'Сбросить настройки',
-              style: TextStyle(color: Colors.white),
+              style: AppTextStyles.medium,
             ),
-            subtitle: const Text(
+            subtitle: Text(
               'Вернуть все параметры к значениям по умолчанию',
-              style: TextStyle(color: Colors.white54, fontSize: AppFontSizes.small),
+              style: AppTextStyles.smallMuted,
             ),
             onTap: _resetSettings,
           ),
@@ -598,12 +592,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Text(
         title.toUpperCase(),
-        style: const TextStyle(
-          color: AppColors.customStyle,
-          fontSize: AppFontSizes.small,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 1.2,
-        ),
+        style: AppTextStyles.smallAccent,
       ),
     );
   }
@@ -615,11 +604,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         backgroundColor: AppColors.appBarBackground,
         title: const Text(
           'Сбросить настройки?',
-          style: TextStyle(color: Colors.white),
+          style: AppTextStyles.medium,
         ),
-        content: const Text(
+        content: Text(
           'Все параметры будут возвращены к значениям по умолчанию.',
-          style: TextStyle(color: Colors.white70),
+          style: AppTextStyles.mediumMuted,
         ),
         actions: [
           TextButton(
@@ -644,7 +633,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
             child: const Text(
               'Сбросить',
-              style: TextStyle(color: AppColors.customStyle),
+              style: AppTextStyles.mediumAccent,
             ),
           ),
         ],
