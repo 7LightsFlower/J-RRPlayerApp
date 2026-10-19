@@ -216,12 +216,11 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     final position = player.position;
     final duration = player.duration;
 
-    // Пока плеер загружается / буферизует / ещё idle —
-    // НЕ трогаем _playingNotifier: пользователь только что нажал play,
-    // иконка должна остаться pause, пока аудио не поедет.
-    final isBuffering = player.processingState == ProcessingState.loading ||
-                        player.processingState == ProcessingState.buffering ||
-                        player.processingState == ProcessingState.idle;
+    // Пока грузится/буферизует — не откатываем иконку play
+    final isBuffering =
+        player.processingState == ProcessingState.loading ||
+        player.processingState == ProcessingState.buffering ||
+        player.processingState == ProcessingState.idle;
 
     if (!isBuffering) {
       bool actualPlayingState = isPlaying;
@@ -231,26 +230,28 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
       _playingNotifier.value = actualPlayingState;
     }
 
-    if (_positionNotifier.value != position) {
-      _positionNotifier.value = position;
+    if (_positionNotifier.value != position) _positionNotifier.value = position;
+    if (_durationNotifier.value != duration) _durationNotifier.value = duration;
+
+    final newMeta = _audioService.currentMetadata;
+    final oldMeta = _metadataNotifier.value;
+
+    // «Идентичность» трека: для радио — title+artist, для подкаста — id эпизода.
+    final String trackKey = _audioService.isPodcastMode
+        ? 'p:${_audioService.currentEpisode?.id ?? ''}'
+        : 'r:${newMeta?.title ?? ''}|${newMeta?.artist ?? ''}';
+
+    final bool trackChanged = trackKey != _lastTrackKey;
+    if (trackChanged) {
+      _lastTrackKey = trackKey;
+      _lastArtUrl = null;   // ← забываем обложку СТАРОГО трека
     }
 
-    if (_durationNotifier.value != duration) {
-      _durationNotifier.value = duration;
-    }
-
-    // Метаданные — как раньше
-    final newMetadata = _audioService.currentMetadata;
-    final oldArt = _metadataNotifier.value?.artUrl;
-    final newArt = newMetadata?.artUrl;
-
-    if (_metadataNotifier.value?.title != newMetadata?.title ||
-        _metadataNotifier.value?.artist != newMetadata?.artist ||
-        oldArt != newArt) {
-      _metadataNotifier.value = newMetadata;
-      if (oldArt != newArt && newArt != null) {
-        _imageUpdateNotifier.value++;
-      }
+    if (trackChanged ||
+        oldMeta?.title != newMeta?.title ||
+        oldMeta?.artist != newMeta?.artist ||
+        oldMeta?.artUrl != newMeta?.artUrl) {
+      _metadataNotifier.value = newMeta;
     }
   }
 
@@ -276,6 +277,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   }
 
   String? _lastArtUrl;
+  String? _lastTrackKey;
 
   @override
   Widget build(BuildContext context) {
