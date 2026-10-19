@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
-import 'package:jrrplayerapp/constants/app_text_styles.dart';
-import 'package:jrrplayerapp/constants/strings.dart';
 import 'package:jrrplayerapp/ui/screens/articles_feed_screen.dart';
 import 'package:jrrplayerapp/ui/screens/news_feed_screen.dart';
 import 'package:jrrplayerapp/ui/screens/podcast_list_screen.dart';
 import 'package:jrrplayerapp/widgets/app_bottom_nav.dart';
+import 'package:jrrplayerapp/widgets/custom_app_bar.dart';
 
 class FullScreenTabs extends StatefulWidget {
   final TabController tabController;
@@ -58,45 +57,43 @@ class _FullScreenTabsState extends State<FullScreenTabs>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.customBackgr,
-      appBar: AppBar(
-        backgroundColor: AppColors.appBarBackground,
-        foregroundColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          AppStrings.appName,
-          style: AppTextStyles.appBarTitle,
-        ),
-      ),
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final Size screen = MediaQuery.of(context).size;
-            final bool isWide = screen.width > screen.height;
+        child: Column(
+          children: [
+            CustomAppBar(
+              leadingIcon: Icons.arrow_back,
+              onLeadingTap: () => Navigator.pop(context),
+            ),
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final Size screen = MediaQuery.of(context).size;
+                  final bool isWide = screen.width > screen.height;
 
-            final nav = AppBottomNav(
-              currentIndex: _fullScreenTabController.index,
-              onTap: (index) => _fullScreenTabController.animateTo(index),
-            );
+                  final nav = AppBottomNav(
+                    currentIndex: _fullScreenTabController.index,
+                    onTap: (index) => _fullScreenTabController.animateTo(index),
+                  );
 
-            if (isWide) {
-              return Row(
-                children: [
-                  Expanded(child: _buildTabContent()),
-                  nav,
-                ],
-              );
-            }
+                  if (isWide) {
+                    return Row(
+                      children: [
+                        Expanded(child: _buildTabContent()),
+                        nav,
+                      ],
+                    );
+                  }
 
-            return Column(
-              children: [
-                Expanded(child: _buildTabContent()),
-                nav,
-              ],
-            );
-          },
+                  return Column(
+                    children: [
+                      Expanded(child: _buildTabContent()),
+                      nav,
+                    ],
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );

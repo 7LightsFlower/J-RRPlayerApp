@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
+import 'package:jrrplayerapp/constants/strings.dart';
 import 'package:provider/provider.dart';
 import 'services/audio_player_service.dart';
 import 'repositories/podcast_repository.dart';
@@ -30,7 +31,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Плеер Радио J-Rock',
+      title: AppStrings.radioName,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: AppColors.customStyle),
         visualDensity: VisualDensity.adaptivePlatformDensity,
