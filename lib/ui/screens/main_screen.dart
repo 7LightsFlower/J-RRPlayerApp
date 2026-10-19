@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:jrrplayerapp/constants/app_text_styles.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
 import 'package:jrrplayerapp/widgets/audio_player_widget.dart';
-import 'package:jrrplayerapp/constants/strings.dart';
+import 'package:jrrplayerapp/constants/app_strings.dart';
 import 'package:jrrplayerapp/ui/screens/enlarged_tabs_screen.dart';
 import 'package:jrrplayerapp/widgets/animated_radio_button.dart';
 import 'package:jrrplayerapp/widgets/app_bottom_nav.dart';
@@ -381,7 +381,6 @@ class AboutScreen extends StatelessWidget {
             ),
             const SizedBox(height: 32),
             const Text(
-              'J-Rock Radio — онлайн-радиостанция, посвящённая '
               'Слушать, думать, жить\n'
               'Человеку нужно место, где можно остановиться и подумать.'
               'Без готовых ответов, правильных слов и необходимости соглашаться.'

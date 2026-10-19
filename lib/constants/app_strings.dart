@@ -5,23 +5,22 @@ class AppStrings {
   // App
   static const String appName = 'РАДИО J-ROCK';
   static const String radioName = 'Радио J-Rock';
-  static const String radioTitle = 'Онлайн радио';
-  static const String radioAlbum= '';
+  static const String radioTitle = 'Радио J-Rock';
+  static const String radioAlbum= 'Онлайн радио';
+  static const String radioArtist= '';
+  static const String stringPlaying = 'СЕЙЧАС ИГРАЕТ';
+
   
   // Tabs
   static const String articlesTab = 'Актуальное';
   static const String newsTab = 'Новости';
   static const String podcastsTab = 'Hora Bissexta';
-  static const String enlargeTabsButton = 'Увеличить вкладки';
   
-  // Placeholders
-  static const String articlesComingSoon = 'Articles Screen - Coming Soon';
-  static const String newsComingSoon = 'News Screen - Coming Soon';
-  
+
   // URLs
   static const String livestreamUrl = 'https://nradio.net/jrock';
-  static const String vkontakteUrl = 'https://vk.com/jrockradio';
-  static const String telegramUrl = 'https://telegram.me/jrockradio';
+//  static const String vkontakteUrl = 'https://vk.com/jrockradio';
+//  static const String telegramUrl = 'https://telegram.me/jrockradio';
   static const String wwweblinkUrl = 'https://jrock.ru';
   static const String articlesFeedUrl = 'https://jrock.ru/lenta';
   static const String newsFeedUrl = 'https://telegram.me/s/jrr_news';
@@ -32,7 +31,7 @@ class AppStrings {
   ];
 
     // Базовый URL для отдельных новостей (по ID)
-  static const String telegramNewsBaseUrl = 'https://telegram.me/jrr_news/';
+  //static const String telegramNewsBaseUrl = 'https://telegram.me/jrr_news/';
   // Podcast RSS Feed mit Proxy-Optionen
   static const String podcastRssOriginalUrl = 'https://cloud.mave.digital/61074';
   static const List<String> corsProxies = [

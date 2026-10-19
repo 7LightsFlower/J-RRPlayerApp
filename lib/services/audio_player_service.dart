@@ -3,7 +3,7 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
-import 'package:jrrplayerapp/constants/strings.dart';
+import 'package:jrrplayerapp/constants/app_strings.dart';
 import 'package:jrrplayerapp/repositories/podcast_repository.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';

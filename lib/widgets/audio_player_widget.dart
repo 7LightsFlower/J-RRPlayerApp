@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
+import 'package:jrrplayerapp/constants/app_strings.dart';
 import 'package:jrrplayerapp/constants/app_text_styles.dart';
 import 'package:jrrplayerapp/services/audio_player_service.dart';
 import 'package:provider/provider.dart';
@@ -47,7 +48,6 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     _audioService = Provider.of<AudioPlayerService>(context, listen: false);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkAndSyncState();
       _printRadioState();
     });
 
@@ -136,40 +136,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
 
   void _onAudioServiceUpdate() {
     if (!mounted) return;
-
-    final currentPlayingState = _audioService.isPlaying;
-    _playingNotifier.value = currentPlayingState;
-
     _syncPlayerState();
-
-    final newMetadata = _audioService.currentMetadata;
-    
-    // Принудительно обновляем метаданные и картинку
-    _metadataNotifier.value = newMetadata;
-    
-    if (newMetadata != null) {
-      _imageUpdateNotifier.value++; // Это заставит Image.network обновиться
-    }
-
-    if (mounted) {
-      setState(() {
-        _playingNotifier.value = _audioService.isPlaying;
-      });
-    }
-  }
-  Future<void> _checkAndSyncState() async {
-    if (!mounted) return;
-
-    final player = _audioService.getPlayer();
-    final isActuallyPlaying = player?.playing ?? false;
-    final serviceSaysPlaying = _audioService.isPlaying;
-
-    if (isActuallyPlaying != serviceSaysPlaying) {
-      _playingNotifier.value = isActuallyPlaying;
-      if (mounted) setState(() {});
-    }
-
-    Future.delayed(const Duration(seconds: 2), _checkAndSyncState);
   }
 
   Future<void> _togglePlayPause() async {
@@ -242,38 +209,46 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
 
   void _syncPlayerState() {
     final player = _audioService.getPlayer();
-    if (player != null) {
-      final isPlaying = player.playing;
-      final position = player.position;
-      final duration = player.duration;
+    if (player == null) return;
 
+    final isPlaying = player.playing;
+    final position = player.position;
+    final duration = player.duration;
+
+    // Пока плеер загружается / буферизует / ещё idle —
+    // НЕ трогаем _playingNotifier: пользователь только что нажал play,
+    // иконка должна остаться pause, пока аудио не поедет.
+    final isBuffering = player.processingState == ProcessingState.loading ||
+                        player.processingState == ProcessingState.buffering ||
+                        player.processingState == ProcessingState.idle;
+
+    if (!isBuffering) {
       bool actualPlayingState = isPlaying;
       if (!_audioService.isPodcastMode) {
         actualPlayingState = _audioService.isRadioPlaying;
       }
-
       _playingNotifier.value = actualPlayingState;
+    }
 
-      if (_positionNotifier.value != position) {
-        _positionNotifier.value = position;
-      }
+    if (_positionNotifier.value != position) {
+      _positionNotifier.value = position;
+    }
 
-      if (_durationNotifier.value != duration) {
-        _durationNotifier.value = duration;
-      }
+    if (_durationNotifier.value != duration) {
+      _durationNotifier.value = duration;
+    }
 
-      // Обновляем метаданные ТОЛЬКО если они реально изменились
-      final newMetadata = _audioService.currentMetadata;
-      final oldArt = _metadataNotifier.value?.artUrl;
-      final newArt = newMetadata?.artUrl;
+    // Метаданные — как раньше
+    final newMetadata = _audioService.currentMetadata;
+    final oldArt = _metadataNotifier.value?.artUrl;
+    final newArt = newMetadata?.artUrl;
 
-      if (_metadataNotifier.value?.title != newMetadata?.title ||
-          _metadataNotifier.value?.artist != newMetadata?.artist ||
-          oldArt != newArt) {
-        _metadataNotifier.value = newMetadata;
-        if (oldArt != newArt) {
-          _imageUpdateNotifier.value++;
-        }
+    if (_metadataNotifier.value?.title != newMetadata?.title ||
+        _metadataNotifier.value?.artist != newMetadata?.artist ||
+        oldArt != newArt) {
+      _metadataNotifier.value = newMetadata;
+      if (oldArt != newArt && newArt != null) {
+        _imageUpdateNotifier.value++;
       }
     }
   }
@@ -441,7 +416,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          'СЕЙЧАС ИГРАЕТ',
+                          AppStrings.stringPlaying,
                           style: AppTextStyles.small.copyWith(
                             color: AppColors.customWhite.withValues(alpha: 0.5),
                             letterSpacing: 1.2,
@@ -452,7 +427,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                         ValueListenableBuilder<AudioMetadata?>(
                           valueListenable: _metadataNotifier,
                           builder: (_, metadata, __) {
-                            final title = metadata?.title ?? 'Онлайн радио';
+                            final title = metadata?.title ?? AppStrings.radioTitle;
                             return Text(
                               title,
                               style: AppTextStyles.playerTrackTitle.copyWith(
@@ -470,7 +445,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                           valueListenable: _metadataNotifier,
                           builder: (_, metadata, __) {
                             return Text(
-                              metadata?.artist ?? 'Онлайн радио',
+                              metadata?.artist ?? AppStrings.radioArtist,
                               style: AppTextStyles.playerTrackArtist,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,

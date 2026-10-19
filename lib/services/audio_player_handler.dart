@@ -1,7 +1,7 @@
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:jrrplayerapp/audio/audio_constants.dart';
-import 'package:jrrplayerapp/constants/strings.dart';
+import 'package:jrrplayerapp/constants/app_strings.dart';
 import 'package:jrrplayerapp/services/audio_player_service.dart';
 import 'dart:async';
 import 'dart:io';
@@ -337,7 +337,6 @@ class AudioPlayerHandler extends BaseAudioHandler {
       id: mediaId,
       title: metadata.title,
       artist: metadata.artist,
-//      album: metadata.album ?? (isRadio ? 'Онлайн радио' : 'Радмо J-Rock'),
       artUri: artUri,
       duration: isRadio ? null : duration,
       extras: {
@@ -577,7 +576,7 @@ class AudioPlayerHandler extends BaseAudioHandler {
     _currentMediaItem = MediaItem(
       id: 'jrr_live_stream',
       title: AppStrings.radioName,
-      artist: 'Онлайн радио',
+      artist: AppStrings.radioArtist,
       artUri: _getArtUriForPlatform(defaultCoverUrl),
       extras: {'isRadio': true},
     );

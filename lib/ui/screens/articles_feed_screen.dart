@@ -10,7 +10,7 @@ import 'package:jrrplayerapp/constants/app_colors.dart';
 import 'package:jrrplayerapp/constants/app_text_styles.dart';
 import 'package:jrrplayerapp/models/article.dart';
 import 'package:jrrplayerapp/widgets/article_item.dart';
-import 'package:jrrplayerapp/constants/strings.dart';
+import 'package:jrrplayerapp/constants/app_strings.dart';
 import 'package:jrrplayerapp/ui/screens/articles_detail_screen.dart';
 
 class ArticlesFeedScreen extends StatefulWidget {

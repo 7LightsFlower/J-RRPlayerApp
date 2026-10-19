@@ -4,7 +4,7 @@ import 'package:xml/xml.dart' as xml;
 import 'package:jrrplayerapp/constants/app_colors.dart';
 import 'package:jrrplayerapp/models/news.dart';
 import 'package:jrrplayerapp/widgets/news_item.dart';
-import 'package:jrrplayerapp/constants/strings.dart';
+import 'package:jrrplayerapp/constants/app_strings.dart';
 
 class NewsFeedScreen extends StatefulWidget {
   const NewsFeedScreen({super.key});

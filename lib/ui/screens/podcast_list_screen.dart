@@ -11,7 +11,7 @@ import 'package:xml/xml.dart' as xml;
 import 'package:jrrplayerapp/models/podcast.dart';
 import 'package:jrrplayerapp/widgets/podcast_item.dart';
 import 'package:flutter/foundation.dart';
-import 'package:jrrplayerapp/constants/strings.dart';
+import 'package:jrrplayerapp/constants/app_strings.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
