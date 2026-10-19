@@ -69,34 +69,6 @@ class _FullScreenTabsState extends State<FullScreenTabs>
           AppStrings.appName,
           style: AppTextStyles.appBarTitle,
         ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(44),
-          child: Container(
-            color: AppColors.appBarBackground,
-            alignment: Alignment.center,
-            child: IntrinsicWidth(
-              child: TabBar(
-                controller: _fullScreenTabController,
-                isScrollable: true,
-                tabAlignment: TabAlignment.center,
-                indicatorColor: AppColors.customStyle,
-                indicatorWeight: 3,
-                indicatorSize: TabBarIndicatorSize.tab,
-                labelColor: AppColors.customStyle,
-                unselectedLabelColor: Colors.white.withValues(alpha: 0.5),
-                labelStyle: AppTextStyles.tabActive,
-                unselectedLabelStyle: AppTextStyles.tabInactive,
-                labelPadding: const EdgeInsets.symmetric(horizontal: 20),
-                dividerColor: Colors.transparent,
-                tabs: const [
-                  Tab(text: AppStrings.articlesTab),
-                  Tab(text: AppStrings.newsTab),
-                  Tab(text: AppStrings.podcastsTab),
-                ],
-              ),
-            ),
-          ),
-        ),
       ),
       body: SafeArea(
         child: LayoutBuilder(

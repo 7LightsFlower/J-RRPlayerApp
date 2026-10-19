@@ -58,35 +58,9 @@ class _EnlargedTabsScreenState extends State<EnlargedTabsScreen>
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        title: const Text(
-          AppStrings.appName,
+        title: Text(
+          AppStrings.appName.toUpperCase(),
           style: AppTextStyles.appBarTitle,
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(44),
-          child: Container(
-            color: AppColors.appBarBackground,
-            alignment: Alignment.center,
-            child: IntrinsicWidth(
-              child: TabBar(
-                controller: _tabController,
-                isScrollable: true,
-                tabAlignment: TabAlignment.center,
-                labelColor: AppColors.customStyle,
-                unselectedLabelColor: Colors.white.withValues(alpha: 0.5),
-                indicatorColor: AppColors.customStyle,
-                labelStyle: AppTextStyles.tabActive,
-                unselectedLabelStyle: AppTextStyles.tabInactive,
-                labelPadding: const EdgeInsets.symmetric(horizontal: 20),
-                dividerColor: Colors.transparent,
-                tabs: const [
-                  Tab(text: AppStrings.articlesTab),
-                  Tab(text: AppStrings.newsTab),
-                  Tab(text: AppStrings.podcastsTab),
-                ],
-              ),
-            ),
-          ),
         ),
       ),
       body: LayoutBuilder(

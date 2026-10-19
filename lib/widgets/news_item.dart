@@ -25,7 +25,7 @@ class NewsItem extends StatelessWidget {
                 const SizedBox(height: 8),
                 Image.network(
                   news.imageUrl,
-                  height: 200,
+                  height: 120,
                   width: double.infinity,
                   fit: BoxFit.contain,
                   alignment: Alignment.center,

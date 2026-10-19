@@ -455,9 +455,9 @@ class AboutScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
-              AppStrings.appName,
-              style: TextStyle(
+            Text(
+              AppStrings.appName.toUpperCase(),
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: AppFontSizes.large,
                 fontWeight: FontWeight.bold,
