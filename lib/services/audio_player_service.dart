@@ -236,7 +236,7 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
         builder: () => AudioPlayerHandler(this),
         config: AudioServiceConfig(
           androidNotificationChannelId: 'com.jrrplayerapp.channel.audio',
-          androidNotificationChannelName: 'Радио J-Rock',
+          androidNotificationChannelName: AppStrings.radioName,
           androidNotificationOngoing: true,
           androidStopForegroundOnPause: false,
           rewindInterval: const Duration(seconds: 30),
@@ -532,8 +532,8 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
               artist = parts.$2;
             }
 
-            artist ??= 'Радио J-Rock';
-            title ??= 'Онлайн радио';
+            artist ??= AppStrings.radioName;
+            title ??= AppStrings.radioTitle;
 
             final cacheKey = '$artist|$title';
             String? cachedCoverUrl;
@@ -564,7 +564,7 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
               final metadata = AudioMetadata(
                 title: title,
                 artist: artist,
-                album: 'Радио J-Rock',
+                album: AppStrings.radioName,
                 artUrl: artUrl,
               );
 
@@ -714,7 +714,7 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
         final metadata = AudioMetadata(
           title: songTitle,
           artist: artist,
-          album: 'Радио J-Rock',
+          album: AppStrings.radioName,
           artUrl: cachedCoverUrl ?? AudioMetadata.defaultCoverUrl,
         );
 
@@ -803,7 +803,7 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
     }
 
     debugPrint('🎵 No separator found, using full title as title');
-    return (fullTitle, 'Радио J-Rock');
+    return (fullTitle, AppStrings.radioName);
   }
 
   bool _looksLikeTitle(String text) {
@@ -1012,9 +1012,9 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
         // Создаем MediaItem для радио
         const mediaItem = MediaItem(
           id: 'jrr_live_stream',
-          title: 'Радио J-Rock',
-          artist: 'Онлайн радио',
-          album: 'Онлайн радио',
+          title: AppStrings.radioName,
+          artist: AppStrings.radioTitle,
+          album: AppStrings.radioAlbum,
           artUri: null,
         );
         

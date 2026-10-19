@@ -452,7 +452,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                         ValueListenableBuilder<AudioMetadata?>(
                           valueListenable: _metadataNotifier,
                           builder: (_, metadata, __) {
-                            final title = metadata?.title ?? 'Радио J-Rock';
+                            final title = metadata?.title ?? 'Онлайн радио';
                             return Text(
                               title,
                               style: AppTextStyles.playerTrackTitle.copyWith(

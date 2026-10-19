@@ -58,8 +58,8 @@ class _EnlargedTabsScreenState extends State<EnlargedTabsScreen>
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        title: Text(
-          AppStrings.appName.toUpperCase(),
+        title: const Text(
+          AppStrings.appName,
           style: AppTextStyles.appBarTitle,
         ),
       ),

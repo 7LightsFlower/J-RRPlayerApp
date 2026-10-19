@@ -3,7 +3,10 @@ import 'package:http/http.dart' as http;
 
 class AppStrings {
   // App
-  static const String appName = 'Радио J-Rock';
+  static const String appName = 'РАДИО J-ROCK';
+  static const String radioName = 'Радио J-Rock';
+  static const String radioTitle = 'Онлайн радио';
+  static const String radioAlbum= '';
   
   // Tabs
   static const String articlesTab = 'Актуальное';

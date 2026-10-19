@@ -227,9 +227,9 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           ),
           Row(
             children: [
-              Text(
-                AppStrings.appName.toUpperCase(),
-                style: const TextStyle(
+              const Text(
+                AppStrings.appName,
+                style: TextStyle(
                   color: Colors.white,
                   fontSize: AppFontSizes.medium,
                   fontWeight: FontWeight.w700,
@@ -290,7 +290,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                 Icon(Icons.radio, color: AppColors.customStyle, size: 36),
                 SizedBox(height: 8),
                 Text(
-                  'Плеер Радио J-Rock',
+                  AppStrings.radioName,
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: AppFontSizes.medium,
@@ -455,9 +455,9 @@ class AboutScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            Text(
-              AppStrings.appName.toUpperCase(),
-              style: const TextStyle(
+            const Text(
+              AppStrings.appName,
+              style: TextStyle(
                 color: Colors.white,
                 fontSize: AppFontSizes.large,
                 fontWeight: FontWeight.bold,
@@ -488,11 +488,11 @@ class AboutScreen extends StatelessWidget {
             const SizedBox(height: 32),
             const Divider(color: Color(0xFF1C212B), thickness: 1),
             const SizedBox(height: 16),
-            _buildInfoRow(Icons.copyright, 'Все права защищены', 'Радио J-Rock'),
+            _buildInfoRow(Icons.copyright, 'Все права защищены', AppStrings.radioName),
             const SizedBox(height: 12),
-            _buildInfoRow(Icons.code, 'Разработчик', 'Команда Радио J-Rock'),
+            _buildInfoRow(Icons.code, 'Разработчик', 'Команда'),
             const SizedBox(height: 12),
-            _buildInfoRow(Icons.web, 'Сайт', 'рttps://jrock.ru'),
+            _buildInfoRow(Icons.web, 'Сайт', AppStrings.wwweblinkUrl),
           ],
         ),
       ),
