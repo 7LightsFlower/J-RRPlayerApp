@@ -8,7 +8,6 @@ import 'dart:io';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/services.dart' show rootBundle;
-import 'package:package_info_plus/package_info_plus.dart';
 
 class AudioPlayerHandler extends BaseAudioHandler {
   final AudioPlayerService audioPlayerService;
@@ -39,9 +38,12 @@ class AudioPlayerHandler extends BaseAudioHandler {
   // --- Кэш для artUri (ключ – оригинальный URL без cache-buster) ---
   final Map<String, Uri> _artUriCache = {};
 
-  // --- Дефолтная обложка для разных платформ ---
-  static String? _androidPackageName;
+  // --- Дефолтная обложка (единый file:// на всех платформах) ---
   static Uri? _cachedLocalDefaultCoverUri;
+
+  /// Поднимайте при каждом изменении assets/images/default_cover.png,
+  /// чтобы сбросить системный кэш large icon.
+  static const int _defaultCoverVersion = 2;
 
   AudioPlayerHandler(this.audioPlayerService) {
     _initDefaultArtUris();
@@ -53,42 +55,32 @@ class AudioPlayerHandler extends BaseAudioHandler {
   // ==================== ИНИЦИАЛИЗАЦИЯ ДЕФОЛТНОЙ ОБЛОЖКИ ====================
 
   Future<void> _initDefaultArtUris() async {
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      final packageInfo = await PackageInfo.fromPlatform();
-      _androidPackageName = packageInfo.packageName;
-      debugPrint('📦 Android packageName: $_androidPackageName');
-       _onDefaultCoverReady();          // ← обновит initial MediaItem на android.resource://…
-    } else if (defaultTargetPlatform == TargetPlatform.iOS) {
-      await _initLocalDefaultCover();
-    }
+    // И Android, и iOS — копируем ассет в Documents и отдаём file://
+    await _initLocalDefaultCover();
   }
 
   Future<void> _initLocalDefaultCover() async {
     if (_cachedLocalDefaultCoverUri != null) return;
+
     const assetPath = 'assets/images/default_cover.png';
     final dir = await getApplicationDocumentsDirectory();
-    final localFile = File('${dir.path}/default_cover.png');
-    if (!await localFile.exists()) {
-      final byteData = await rootBundle.load(assetPath);
-      await localFile.writeAsBytes(byteData.buffer.asUint8List());
-    }
+
+    // Имя файла содержит версию → при смене картинки меняется URI → кэш сбрасывается
+    final localFile = File('${dir.path}/default_cover_v$_defaultCoverVersion.png');
+
+    // Перезаписываем ВСЕГДА (а не только если файла нет)
+    final byteData = await rootBundle.load(assetPath);
+    await localFile.writeAsBytes(byteData.buffer.asUint8List(), flush: true);
+
     _cachedLocalDefaultCoverUri = Uri.file(localFile.path);
-    debugPrint('🍏 iOS default cover ready: $_cachedLocalDefaultCoverUri');
-      
-    // Вызываем обновление уведомления
+    debugPrint('🎨 Local default cover ready: $_cachedLocalDefaultCoverUri');
+
     _onDefaultCoverReady();
-}
+  }
 
   Uri _getDefaultArtUri() {
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      if (_androidPackageName != null) {
-        return Uri.parse(
-            'android.resource://$_androidPackageName/drawable/default_cover');
-      }
-    } else if (defaultTargetPlatform == TargetPlatform.iOS) {
-      if (_cachedLocalDefaultCoverUri != null) {
-        return _cachedLocalDefaultCoverUri!;
-      }
+    if (_cachedLocalDefaultCoverUri != null) {
+      return _cachedLocalDefaultCoverUri!;
     }
     return Uri.parse('asset:///assets/images/default_cover.png');
   }
@@ -374,16 +366,7 @@ class AudioPlayerHandler extends BaseAudioHandler {
   Uri? _getArtUriForPlatform(String artUrl) {
     // Специальная обработка для дефолтной обложки
     if (artUrl == AudioMetadata.defaultCoverUrl) {
-      if (defaultTargetPlatform == TargetPlatform.android && _androidPackageName != null) {
-        // Android: используем ресурс, если пакет известен
-        return Uri.parse('android.resource://$_androidPackageName/drawable/default_cover');
-      } else if (defaultTargetPlatform == TargetPlatform.iOS && _cachedLocalDefaultCoverUri != null) {
-        // iOS: используем скопированный файл
-        return _cachedLocalDefaultCoverUri!;
-      } else {
-        // Временный fallback (может не работать, но после инициализации обновится)
-        return Uri.parse('asset:///assets/images/default_cover.png');
-      }
+      return _getDefaultArtUri();
     }
 
     // Для остальных URL используем кэш (как и раньше)
