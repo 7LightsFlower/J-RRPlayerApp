@@ -6,6 +6,7 @@ import 'package:jrrplayerapp/constants/app_colors.dart';
 import 'package:jrrplayerapp/constants/app_strings.dart';
 import 'package:jrrplayerapp/constants/app_text_styles.dart';
 import 'package:jrrplayerapp/services/audio_player_service.dart';
+import 'package:just_audio/just_audio.dart'; 
 import 'package:provider/provider.dart';
 
 /// A tiny wrapper that turns a [Stream<T>] into a [ValueListenable<T>].
