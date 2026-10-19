@@ -8,6 +8,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:jrrplayerapp/widgets/custom_app_bar.dart';
 
 class ArticleDetailScreen extends StatefulWidget {
   final String articleUrl;
@@ -130,33 +131,35 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
     if (kIsWeb) {
       return Scaffold(
         backgroundColor: AppColors.customBackgr,
-        appBar: AppBar(
-          backgroundColor: AppColors.appBarBackground,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          title: Text(widget.title, style: AppTextStyles.appBarTitle),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
-        body: const Center(
+        body: SafeArea(
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.open_in_browser,
-                size: 80,
-                color: AppColors.customWhite,
+              CustomAppBar(
+                leadingIcon: Icons.arrow_back,
+                onLeadingTap: () => Navigator.pop(context),
               ),
-              SizedBox(height: 24),
-              Text(
-                'Открываем статью в новой вкладке...',
-                style: AppTextStyles.large,
-                textAlign: TextAlign.center,
+              const Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.open_in_browser,
+                        size: 80,
+                        color: AppColors.customWhite,
+                      ),
+                      SizedBox(height: 24),
+                      Text(
+                        'Открываем статью в новой вкладке...',
+                        style: AppTextStyles.large,
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 16),
+                      CircularProgressIndicator(color: AppColors.customStyle),
+                    ],
+                  ),
+                ),
               ),
-              SizedBox(height: 16),
-              CircularProgressIndicator(color: AppColors.customStyle),
             ],
           ),
         ),
@@ -165,41 +168,25 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
 
     // ==================== МОБИЛЬНАЯ ВЕРСИЯ ====================
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppColors.appBarBackground,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        title: Text(widget.title, style: AppTextStyles.appBarTitle),
-        actions: [
-          if (_isLoading)
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  value: _loadingProgress,
-                  valueColor: const AlwaysStoppedAnimation<Color>(
-                    Colors.white,
-                  ),
+      backgroundColor: AppColors.customBackgr,
+      body: SafeArea(
+        child: Column(
+          children: [
+            CustomAppBar(
+              leadingIcon: Icons.arrow_back,
+              onLeadingTap: () => Navigator.pop(context),
+            ),
+            if (_isLoading && _loadingProgress < 1.0)
+              LinearProgressIndicator(
+                value: _loadingProgress,
+                backgroundColor: AppColors.customBackgr,
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                  AppColors.customStyle,
                 ),
               ),
-            ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          WebViewWidget(controller: _controller!),
-          if (_isLoading && _loadingProgress < 1.0)
-            LinearProgressIndicator(
-              value: _loadingProgress,
-              backgroundColor: AppColors.customBackgr,
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                AppColors.customStyle,
-              ),
-            ),
-        ],
+            Expanded(child: WebViewWidget(controller: _controller!)),
+          ],
+        ),
       ),
     );
   }
