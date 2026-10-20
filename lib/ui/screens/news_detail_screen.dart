@@ -67,7 +67,7 @@ class NewsDetailScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 14),
-                    ],
+                    ],                    
                     DefaultTextStyle(
                       style: AppTextStyles.medium.copyWith(height: 1.5),
                       child: Html(

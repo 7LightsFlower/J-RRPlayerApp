@@ -23,12 +23,43 @@ class NewsItem extends StatelessWidget {
               Text(news.date,style: AppTextStyles.newsDate),
               if (news.imageUrl.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                Image.network(
-                  news.imageUrl,
-                  height: 120,
-                  width: double.infinity,
-                  fit: BoxFit.contain,
-                  alignment: Alignment.center,
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: AspectRatio(
+                    aspectRatio: 16 / 9,          // единые пропорции для всех картинок
+                    child: Image.network(
+                      news.imageUrl,
+                      width: double.infinity,
+                      fit: BoxFit.cover,          // заполняет всю рамку, обрезая края
+                      alignment: Alignment.center,
+                      errorBuilder: (_, __, ___) => Container(
+                        color: AppColors.surfaceMuted,
+                        child: const Center(
+                          child: Icon(
+                            Icons.image_not_supported_outlined,
+                            color: AppColors.customGrey,
+                            size: 32,
+                          ),
+                        ),
+                      ),
+                      loadingBuilder: (context, child, progress) {
+                        if (progress == null) return child;
+                        return Container(
+                          color: AppColors.surfaceMuted,
+                          child: const Center(
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.customStyle,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 ),
               ],
               const SizedBox(height: 8),
