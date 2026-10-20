@@ -53,7 +53,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     });
 
     _audioService.playbackStateStream.listen((isPlaying) {
-      if (mounted) {
+      if (mounted && !_isToggling) {
         setState(() {
           _playingNotifier.value = isPlaying;
         });
@@ -155,23 +155,18 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
 
       if (isCurrentlyPlaying) {
         debugPrint('🎵 Switching to PAUSE');
-        unawaited(_audioService.pause());
+        await _audioService.pause();
       } else {
         debugPrint('🎵 Switching to PLAY');
 
         if (_audioService.isPodcastMode &&
             _audioService.currentEpisode != null) {
-          unawaited(_audioService.playPodcast(_audioService.currentEpisode!));
+          await _audioService.playPodcast(_audioService.currentEpisode!);
         } else {
-          _audioService.getPlayer();
-          final isRadioPaused = _audioService.isRadioPaused;
-
-          debugPrint('🎵 Radio state: paused=$isRadioPaused');
-
-          if (isRadioPaused) {
-            unawaited(_audioService.resumeRadioFromPause());
+          if (_audioService.isRadioPaused) {
+            await _audioService.resumeRadioFromPause();
           } else {
-            unawaited(_audioService.playRadio());
+            await _audioService.playRadio();
           }
         }
       }
@@ -216,13 +211,15 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     final position = player.position;
     final duration = player.duration;
 
-    // Пока грузится/буферизует — не откатываем иконку play
+    // Пока идёт переключение (пользователь только что нажал play/pause) —
+    // НЕ откатываем иконку из промежуточных состояний.
+    // Плюс не откатываем во время буферизации/инициализации.
     final isBuffering =
         player.processingState == ProcessingState.loading ||
         player.processingState == ProcessingState.buffering ||
         player.processingState == ProcessingState.idle;
 
-    if (!isBuffering) {
+    if (!_isToggling && !isBuffering) {
       bool actualPlayingState = isPlaying;
       if (!_audioService.isPodcastMode) {
         actualPlayingState = _audioService.isRadioPlaying;
@@ -236,7 +233,6 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     final newMeta = _audioService.currentMetadata;
     final oldMeta = _metadataNotifier.value;
 
-    // «Идентичность» трека: для радио — title+artist, для подкаста — id эпизода.
     final String trackKey = _audioService.isPodcastMode
         ? 'p:${_audioService.currentEpisode?.id ?? ''}'
         : 'r:${newMeta?.title ?? ''}|${newMeta?.artist ?? ''}';
@@ -244,7 +240,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     final bool trackChanged = trackKey != _lastTrackKey;
     if (trackChanged) {
       _lastTrackKey = trackKey;
-      _lastArtUrl = null;   // ← забываем обложку СТАРОГО трека
+      _lastArtUrl = null;
     }
 
     if (trackChanged ||
@@ -254,7 +250,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
       _metadataNotifier.value = newMeta;
     }
   }
-
+  
   Future<void> _setVolume(double volume) async {
     try {
       final player = _audioService.getPlayer();
