@@ -383,6 +383,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
             Padding(
               padding: EdgeInsets.symmetric(horizontal: largeSpacing),
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.center, // Центрируем весь блок
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   // ---- ALBUM COVER ----
@@ -418,7 +419,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                   SizedBox(width: mediumSpacing),
 
                   // ---- TRACK INFO ----
-                  Expanded(
+                  Flexible(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,

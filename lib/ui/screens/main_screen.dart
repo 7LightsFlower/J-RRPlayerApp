@@ -156,6 +156,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   }
 
   // ==================== PORTRAIT LAYOUT ====================
+
   Widget _buildPortraitLayout() {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -163,13 +164,21 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
 
         return SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
-          child: Column(
-            children: [
-              AnimatedRadioButton(screenWidth: availableWidth * 0.9),
-              const SizedBox(height: 12),
-              const AudioPlayerWidget(),
-              const SizedBox(height: 12),
-            ],
+          child: ConstrainedBox(
+            // Заставляем контент занять минимум всю доступную высоту экрана
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Column(
+              // Распределяем свободное пространство равномерно между элементами
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: AnimatedRadioButton(screenWidth: availableWidth * 0.9),
+                ),
+                const AudioPlayerWidget(),
+                const SizedBox(height: 16), // Небольшой отступ снизу
+              ],
+            ),
           ),
         );
       },
