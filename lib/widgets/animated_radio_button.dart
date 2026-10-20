@@ -15,12 +15,11 @@ class AnimatedRadioButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final double buttonSize = screenWidth * 0.5;
-    final audioService = context.read<AudioPlayerService>();
-    final player = audioService.getPlayer();
 
     return Consumer<AudioPlayerService>(
       builder: (context, service, _) {
         final bool hasConnection = service.hasNetworkConnection ?? true;
+        final player = service.getPlayer();    // ← ВНУТРИ, перечитывается при каждом rebuild
 
         if (player == null) {
           return _buildStaticButton(context, service, buttonSize, hasConnection);
@@ -31,7 +30,8 @@ class AnimatedRadioButton extends StatelessWidget {
           builder: (context, snapshot) {
             final state = snapshot.data;
             final bool isPlaying = state?.playing ?? false;
-            final bool isBuffering = state?.processingState == ProcessingState.loading ||
+            final bool isBuffering =
+                state?.processingState == ProcessingState.loading ||
                 state?.processingState == ProcessingState.buffering;
 
             return _buildButton(
@@ -47,7 +47,7 @@ class AnimatedRadioButton extends StatelessWidget {
       },
     );
   }
-
+  
   Widget _buildStaticButton(
     BuildContext context,
     AudioPlayerService service,

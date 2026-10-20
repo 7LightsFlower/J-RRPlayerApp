@@ -6,6 +6,7 @@ import 'package:jrrplayerapp/constants/app_colors.dart';
 import 'package:jrrplayerapp/constants/app_strings.dart';
 import 'package:jrrplayerapp/constants/app_text_styles.dart';
 import 'package:jrrplayerapp/services/audio_player_service.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:provider/provider.dart';
 
 /// A tiny wrapper that turns a [Stream<T>] into a [ValueListenable<T>].
@@ -34,11 +35,14 @@ class AudioPlayerWidget extends StatefulWidget {
 class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   late AudioPlayerService _audioService;
   late final ValueNotifier<bool> _playingNotifier;
-  late final ValueNotifier<Duration?> _positionNotifier;
-  late final ValueNotifier<Duration?> _durationNotifier;
+  late ValueNotifier<Duration?> _positionNotifier;
+  late ValueNotifier<Duration?> _durationNotifier;
   late final ValueNotifier<AudioMetadata?> _metadataNotifier;
   late final ValueNotifier<int> _imageUpdateNotifier;
-  late final ValueNotifier<double> _volumeNotifier;
+  late ValueNotifier<double> _volumeNotifier;
+
+  AudioPlayer? _lastPlayer;   // ← добавить это поле
+
   bool _isToggling = false;
 
   @override
@@ -104,18 +108,20 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
 
     _playingNotifier = ValueNotifier<bool>(_audioService.isPlaying);
 
+    // Если player уже есть — берём его стримы, иначе — пустые стримы сервиса,
+    // которые начнут эмитить, как только player появится (они читают _player каждый раз).
     _positionNotifier = _StreamValueNotifier<Duration?>(
-      player?.positionStream ?? Stream.value(Duration.zero),
+      player?.positionStream ?? _audioService.positionStream,
       player?.position ?? Duration.zero,
     );
 
     _durationNotifier = _StreamValueNotifier<Duration?>(
-      player?.durationStream ?? Stream.value(null),
+      player?.durationStream ?? _audioService.durationStream,
       player?.duration,
     );
 
     _volumeNotifier = _StreamValueNotifier<double>(
-      player?.volumeStream ?? Stream.value(1.0),
+      player?.volumeStream ?? _audioService.getVolumeStream(),
       player?.volume ?? 1.0,
     );
 
@@ -136,7 +142,38 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
 
   void _onAudioServiceUpdate() {
     if (!mounted) return;
+
+    // Если player только что появился — пересоздаём подписки на его стримы
+    final player = _audioService.getPlayer();
+    if (player != null && _lastPlayer != player) {
+      _lastPlayer = player;
+      _rebindStreams(player);
+    }
+
     _syncPlayerState();
+  }
+
+  void _rebindStreams(AudioPlayer player) {
+    _positionNotifier.dispose();
+    _durationNotifier.dispose();
+    _volumeNotifier.dispose();
+
+    _positionNotifier = _StreamValueNotifier<Duration?>(
+      player.positionStream,
+      player.position,
+    );
+    _durationNotifier = _StreamValueNotifier<Duration?>(
+      player.durationStream,
+      player.duration,
+    );
+    _volumeNotifier = _StreamValueNotifier<double>(
+      player.volumeStream,
+      player.volume,
+    );
+
+    // ⚠️ ВАЖНО: переподписываемся на duration для podcast-режима,
+    // потому что старый listener умер вместе со старым _durationNotifier.
+    _setupDurationSync();
   }
 
   Future<void> _togglePlayPause() async {
