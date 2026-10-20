@@ -6,7 +6,6 @@ import 'package:jrrplayerapp/constants/app_colors.dart';
 import 'package:jrrplayerapp/constants/app_strings.dart';
 import 'package:jrrplayerapp/constants/app_text_styles.dart';
 import 'package:jrrplayerapp/services/audio_player_service.dart';
-import 'package:just_audio/just_audio.dart'; 
 import 'package:provider/provider.dart';
 
 /// A tiny wrapper that turns a [Stream<T>] into a [ValueListenable<T>].
@@ -141,52 +140,45 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   }
 
   Future<void> _togglePlayPause() async {
-    if (_isToggling) {
-      debugPrint('🎵 Toggle ignored: already toggling');
-      return;
-    }
+    if (_isToggling) return;
 
     setState(() {
       _isToggling = true;
     });
 
+    final isCurrentlyPlaying = _audioService.isPlaying;
+
+    // Оптимистичное обновление UI (иконка меняется сразу)
+    _playingNotifier.value = !isCurrentlyPlaying;
+
     try {
-      final isCurrentlyPlaying = _audioService.isPlaying;
-
       if (isCurrentlyPlaying) {
-        debugPrint('🎵 Switching to PAUSE');
-        await _audioService.pause();
+        unawaited(_audioService.pause());
       } else {
-        debugPrint('🎵 Switching to PLAY');
-
-        if (_audioService.isPodcastMode &&
-            _audioService.currentEpisode != null) {
-          await _audioService.playPodcast(_audioService.currentEpisode!);
+        if (_audioService.isPodcastMode && _audioService.currentEpisode != null) {
+          unawaited(_audioService.playPodcast(_audioService.currentEpisode!));
         } else {
           if (_audioService.isRadioPaused) {
-            await _audioService.resumeRadioFromPause();
+            unawaited(_audioService.resumeRadioFromPause());
           } else {
-            await _audioService.playRadio();
+            unawaited(_audioService.playRadio());
           }
         }
-      }
-
-      if (mounted) {
-        setState(() {
-          _playingNotifier.value = !isCurrentlyPlaying;
-        });
       }
     } catch (e) {
       debugPrint('🎵 Error in toggle play/pause: $e');
       _showErrorSnackBar('Error: $e');
+      _playingNotifier.value = isCurrentlyPlaying; // Откат
     } finally {
-      if (mounted) {
-        setState(() {
-          _isToggling = false;
-        });
-      } else {
-        _isToggling = false;
-      }
+      // Снимаем спиннер через 500 мс, не дожидаясь окончания загрузки
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          setState(() {
+            _isToggling = false;
+          });
+          _syncPlayerState(); // Принудительно синхронизируем
+        }
+      });
     }
   }
 
@@ -207,24 +199,18 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     final player = _audioService.getPlayer();
     if (player == null) return;
 
-    final isPlaying = player.playing;
     final position = player.position;
     final duration = player.duration;
 
-    // Пока идёт переключение (пользователь только что нажал play/pause) —
-    // НЕ откатываем иконку из промежуточных состояний.
-    // Плюс не откатываем во время буферизации/инициализации.
-    final isBuffering =
-        player.processingState == ProcessingState.loading ||
-        player.processingState == ProcessingState.buffering ||
-        player.processingState == ProcessingState.idle;
-
-    if (!_isToggling && !isBuffering) {
-      bool actualPlayingState = isPlaying;
+    // Не блокируем обновление UI стейтом idle или buffering
+    if (!_isToggling) {
+      bool actualPlayingState = player.playing;
       if (!_audioService.isPodcastMode) {
         actualPlayingState = _audioService.isRadioPlaying;
       }
-      _playingNotifier.value = actualPlayingState;
+      if (_playingNotifier.value != actualPlayingState) {
+        _playingNotifier.value = actualPlayingState;
+      }
     }
 
     if (_positionNotifier.value != position) _positionNotifier.value = position;
@@ -232,25 +218,12 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
 
     final newMeta = _audioService.currentMetadata;
     final oldMeta = _metadataNotifier.value;
-
-    final String trackKey = _audioService.isPodcastMode
-        ? 'p:${_audioService.currentEpisode?.id ?? ''}'
-        : 'r:${newMeta?.title ?? ''}|${newMeta?.artist ?? ''}';
-
-    final bool trackChanged = trackKey != _lastTrackKey;
-    if (trackChanged) {
-      _lastTrackKey = trackKey;
-      _lastArtUrl = null;
-    }
-
-    if (trackChanged ||
-        oldMeta?.title != newMeta?.title ||
-        oldMeta?.artist != newMeta?.artist ||
-        oldMeta?.artUrl != newMeta?.artUrl) {
+    
+    if (oldMeta?.title != newMeta?.title || oldMeta?.artUrl != newMeta?.artUrl) {
       _metadataNotifier.value = newMeta;
     }
   }
-  
+
   Future<void> _setVolume(double volume) async {
     try {
       final player = _audioService.getPlayer();
@@ -273,7 +246,6 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   }
 
   String? _lastArtUrl;
-  String? _lastTrackKey;
 
   @override
   Widget build(BuildContext context) {
