@@ -157,29 +157,31 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           children: [
             Expanded(
               child: Padding(
+                // Меньше отступов → больше места для логотипа.
+                // Снизу 16 + собственный запас виджета под пульсацию (~13)
+                // всё ещё хватает, чтобы кольцо не касалось свечения Play.
                 padding: const EdgeInsets.only(
-                  top: AppSpacing.small,
-                  // Запас под свечение кнопки Play (blur 20)
-                  bottom: AppSpacing.medium,
+                  top: AppSpacing.xxsmall,
+																				   
+                  bottom: AppSpacing.small,
                 ),
                 child: Center(
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     child: AnimatedRadioButton(
-                      screenWidth: availableWidth * 0.9,
+                      screenWidth: availableWidth,
                     ),
                   ),
                 ),
               ),
             ),
             const AudioPlayerWidget(),
-            const SizedBox(height: AppSpacing.small),
+            const SizedBox(height: AppSpacing.xsmall),
           ],
         );
       },
     );
   }
-
   // ==================== LANDSCAPE LAYOUT ====================
   Widget _buildLandscapeLayout() {
     return LayoutBuilder(

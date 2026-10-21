@@ -58,6 +58,12 @@ class NewsDetailScreen extends StatelessWidget {
                   children: [
                     Text(news.date, style: AppTextStyles.newsDate),
                     const SizedBox(height: AppSpacing.xsmall),
+
+                    // Заголовок — как в карточке новости (14, жирный, белый)
+                    if (news.title.trim().isNotEmpty) ...[
+                      Text(news.title.trim(), style: AppTextStyles.mediumBold),
+                      const SizedBox(height: AppSpacing.smallMinus),
+                    ],
                     if (news.imageUrl.isNotEmpty) ...[
                       ClipRRect(
                         borderRadius: BorderRadius.circular(AppRadius.small),

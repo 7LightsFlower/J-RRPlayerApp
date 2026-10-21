@@ -314,19 +314,28 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
           mainAxisSize: MainAxisSize.min,
           children: [
             // ==================== PLAYBACK CONTROLS ====================
-            Row(
+            // Кнопки «предыдущий / следующий» есть только у подкастов.
+            // В режиме live-радио они скрыты, Play остаётся по центру.
+            // ListenableBuilder перерисовывает ряд при смене режима.
+            ListenableBuilder(
+              listenable: _audioService,
+              builder: (context, _) {
+                final bool isPodcast = _audioService.isPodcastMode;
+                return Row(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                IconButton(
-                  icon: Icon(Icons.skip_previous, size: skipIconSize),
-                  onPressed:
-                      _audioService.isPodcastMode ? _playPreviousPodcast : null,
-                  color: _audioService.isPodcastMode
-                      ? AppColors.customWhite
-                      : AppColors.customGrey,
-                ),
-                SizedBox(width: mediumSpacing),
+                if (isPodcast) ...[
+                  IconButton(
+                    icon: Icon(Icons.skip_previous, size: skipIconSize),
+							
+                    onPressed: _playPreviousPodcast,
+													
+                    color: AppColors.customWhite,
+											 
+                  ),
+                  SizedBox(width: mediumSpacing),
+                ],
 
                 // ===== LARGER PLAY / PAUSE BUTTON =====
                 ValueListenableBuilder<bool>(
@@ -374,17 +383,21 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                     );
                   },
                 ),
-                SizedBox(width: mediumSpacing),
+                if (isPodcast) ...[
+                  SizedBox(width: mediumSpacing),
 
-                IconButton(
-                  icon: Icon(Icons.skip_next, size: skipIconSize),
-                  onPressed:
-                      _audioService.isPodcastMode ? _playNextPodcast : null,
-                  color: _audioService.isPodcastMode
-                      ? AppColors.customWhite
-                      : AppColors.customGrey,
-                ),
+                  IconButton(
+                    icon: Icon(Icons.skip_next, size: skipIconSize),
+							
+                    onPressed: _playNextPodcast,
+													
+                    color: AppColors.customWhite,
+											 
+                  ),
+                ],
               ],
+                );
+              },
             ),
             SizedBox(height: largeSpacing),
 
