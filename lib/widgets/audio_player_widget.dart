@@ -440,7 +440,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                             return Text(
                               title,
                               style: AppTextStyles.playerTrackTitle.copyWith(
-                                fontSize: isCompact ? AppFontSizes.large : AppFontSizes.largeTitle
+                                fontSize: isCompact ? 18.0 : 22.0,
                                 fontWeight: FontWeight.w400,
                               ),
                               maxLines: 2,
