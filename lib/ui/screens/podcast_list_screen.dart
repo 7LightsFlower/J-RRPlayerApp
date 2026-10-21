@@ -2,7 +2,10 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
+import 'package:jrrplayerapp/constants/app_sizes.dart';
+import 'package:jrrplayerapp/constants/app_strings.dart';
 import 'package:jrrplayerapp/constants/app_text_styles.dart';
 import 'package:jrrplayerapp/repositories/podcast_repository.dart';
 import 'package:jrrplayerapp/services/audio_player_service.dart';
@@ -10,8 +13,6 @@ import 'package:provider/provider.dart';
 import 'package:xml/xml.dart' as xml;
 import 'package:jrrplayerapp/models/podcast.dart';
 import 'package:jrrplayerapp/widgets/podcast_item.dart';
-import 'package:flutter/foundation.dart';
-import 'package:jrrplayerapp/constants/app_strings.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -105,7 +106,8 @@ List<PodcastEpisode> _parseRssFull(String responseBody) {
 
         final description = descriptionElement?.innerText.trim() ?? '';
         final durationString = durationElement?.innerText.trim() ?? '0:00:00';
-        final guid = guidElement?.innerText.trim() ?? '${podcasts.length}_${DateTime.now().millisecondsSinceEpoch}';
+        final guid = guidElement?.innerText.trim() ??
+            '${podcasts.length}_${DateTime.now().millisecondsSinceEpoch}';
         final duration = _parseDuration(durationString);
         DateTime publishedDate = DateTime.now();
         if (pubDateElement != null) {
@@ -121,8 +123,8 @@ List<PodcastEpisode> _parseRssFull(String responseBody) {
           description: description,
           duration: duration,
           publishedDate: publishedDate,
-          channelId: 'jrr_podcast_channel',
-          channelTitle: 'Подкасты',
+          channelId: AppStrings.podcastChannelId,
+          channelTitle: AppStrings.podcastChannelTitle,
         ));
       } catch (e) {
         continue;
@@ -223,7 +225,8 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
   Future<void> _initApp() async {
     await _initConnectivity();
 
-    _connectivitySubscription = _connectivity.onConnectivityChanged.listen(_handleConnectivityResult);
+    _connectivitySubscription =
+        _connectivity.onConnectivityChanged.listen(_handleConnectivityResult);
     _scrollController.addListener(_scrollListener);
 
     await _loadCachedData();
@@ -277,7 +280,7 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
       final prefs = await SharedPreferences.getInstance();
       final cachedData = prefs.getString(_rssCacheKey);
       if (cachedData != null) {
-        _updateStatus('Загрузка из кэша...');
+        _updateStatus(AppStrings.podcastLoadingCache);
         List<PodcastEpisode> cachedPodcasts;
         if (kIsWeb) {
           cachedPodcasts = _parseRssFull(cachedData);
@@ -286,9 +289,11 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
               .timeout(const Duration(seconds: 3), onTimeout: () => []);
         }
         if (cachedPodcasts.isNotEmpty && mounted) {
-          final podcastRepo = Provider.of<PodcastRepository>(context, listen: false);
+          final podcastRepo =
+              Provider.of<PodcastRepository>(context, listen: false);
           podcastRepo.setEpisodes(cachedPodcasts);
-          cachedPodcasts.sort((a, b) => b.publishedDate.compareTo(a.publishedDate));
+          cachedPodcasts
+              .sort((a, b) => b.publishedDate.compareTo(a.publishedDate));
           setState(() {
             podcasts = cachedPodcasts.take(pageSize).toList();
             isLoading = false;
@@ -327,7 +332,8 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
       _isDownloading = true;
       _startStatusUpdates();
 
-      final response = await AppStrings.getWithProxy(AppStrings.podcastRssOriginalUrl);
+      final response =
+          await AppStrings.getWithProxy(AppStrings.podcastRssOriginalUrl);
       final responseBody = response.body;
       debugPrint('📡 RSS получен, длина: ${responseBody.length}');
 
@@ -345,7 +351,8 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
         await _saveToCache(responseBody);
 
         podcastRepo.setEpisodes(freshPodcasts);
-        freshPodcasts.sort((a, b) => b.publishedDate.compareTo(a.publishedDate));
+        freshPodcasts
+            .sort((a, b) => b.publishedDate.compareTo(a.publishedDate));
 
         setState(() {
           podcasts = freshPodcasts.take(pageSize).toList();
@@ -357,12 +364,12 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
       } else {
         if (podcasts.isEmpty) {
           setState(() {
-            errorMessage = 'Не удалось загрузить подкасты (пустой ответ)';
+            errorMessage = AppStrings.podcastEmptyResponse;
             isLoading = false;
           });
         } else {
           setState(() {
-            errorMessage = 'Обновление не удалось, показаны кешированные данные';
+            errorMessage = AppStrings.podcastUpdateFailedCached;
           });
         }
       }
@@ -371,12 +378,12 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
       if (mounted) {
         if (podcasts.isEmpty) {
           setState(() {
-            errorMessage = 'Ошибка загрузки: ${e.toString()}';
+            errorMessage = '${AppStrings.podcastLoadError}: $e';
             isLoading = false;
           });
         } else {
           setState(() {
-            errorMessage = 'Не удалось обновить, показан кеш';
+            errorMessage = AppStrings.podcastShowingCache;
           });
         }
       }
@@ -390,7 +397,7 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
     if (!mounted) return;
     if (_connectionType == ConnectionType.offline) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Нет подключения к интернету')),
+        const SnackBar(content: Text(AppStrings.noInternet)),
       );
       return;
     }
@@ -401,7 +408,8 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_rssCacheKey, rssData);
-      await prefs.setString(_cacheTimestampKey, DateTime.now().toIso8601String());
+      await prefs.setString(
+          _cacheTimestampKey, DateTime.now().toIso8601String());
       debugPrint('💾 Cache saved');
     } catch (e) {
       debugPrint('Cache save error: $e');
@@ -431,13 +439,7 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
   }
 
   String _getRandomStatusMessage() {
-    const messages = [
-      'Оптимизация загрузки...',
-      'Обработка данных...',
-      'Подготовка к воспроизведению...',
-      'Настройка качества звука...',
-      'Проверка доступности...',
-    ];
+    const messages = AppStrings.podcastStatusMessages;
     return messages[Random().nextInt(messages.length)];
   }
 
@@ -468,7 +470,8 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
     try {
       await Future.delayed(const Duration(milliseconds: 500));
       if (!mounted) return;
-      final podcastRepo = Provider.of<PodcastRepository>(context, listen: false);
+      final podcastRepo =
+          Provider.of<PodcastRepository>(context, listen: false);
       final allEpisodes = podcastRepo.getSortedEpisodes();
       final startIndex = podcasts.length;
       final endIndex = startIndex + pageSize;
@@ -512,13 +515,14 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
   @override
   Widget build(BuildContext context) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final audioService = Provider.of<AudioPlayerService>(context, listen: false);
-      final podcastRepo = Provider.of<PodcastRepository>(context, listen: false);
+      final audioService =
+          Provider.of<AudioPlayerService>(context, listen: false);
+      final podcastRepo =
+          Provider.of<PodcastRepository>(context, listen: false);
       audioService.setPodcastRepository(podcastRepo);
     });
 
     return Scaffold(
-      backgroundColor: AppColors.customBlack,
       body: _buildBody(),
     );
   }
@@ -541,9 +545,9 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         const CircularProgressIndicator(),
-        const SizedBox(height: 20),
+        const SizedBox(height: AppSpacing.smallPlus),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.large),
           child: Column(
             children: [
               Text(
@@ -551,10 +555,10 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
                 style: AppTextStyles.medium,
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.xsmall),
               if (_connectionType == ConnectionType.mobile)
                 Text(
-                  'Используется оптимизированный режим для медленного соединения',
+                  AppStrings.podcastSlowMode,
                   style: AppTextStyles.podcastMeta,
                   textAlign: TextAlign.center,
                 ),
@@ -568,7 +572,7 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
   Widget _buildErrorScreen() {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(AppSpacing.small),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -576,36 +580,33 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
               _connectionType == ConnectionType.offline
                   ? Icons.wifi_off
                   : Icons.error_outline,
-              size: 64,
+              size: AppIconSizes.xxlarge,
               color: AppColors.customWhite,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.small),
             Text(
               errorMessage,
               style: AppTextStyles.medium,
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.medium),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 ElevatedButton(
                   onPressed: _refreshPodcasts,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.customStyle,
-                    foregroundColor: AppColors.customWhite,
-                  ),
-                  child: const Text('Повторить', style: AppTextStyles.button),
+                  child: const Text(AppStrings.retry),
                 ),
-                const SizedBox(width: 16),
-                if (_connectionType != ConnectionType.offline && podcasts.isNotEmpty)
+                const SizedBox(width: AppSpacing.small),
+                if (_connectionType != ConnectionType.offline &&
+                    podcasts.isNotEmpty)
                   OutlinedButton(
                     onPressed: () {
                       setState(() {
                         errorMessage = '';
                       });
                     },
-                    child: const Text('Продолжить', style: AppTextStyles.button),
+                    child: const Text(AppStrings.continueLabel),
                   ),
               ],
             ),
@@ -620,27 +621,24 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.podcasts, size: 64, color: AppColors.customGrey),
-          const SizedBox(height: 16),
-          const Text(
-            'Нет доступных подкастов',
-            style: AppTextStyles.large,
+          const Icon(
+            Icons.podcasts,
+            size: AppIconSizes.xxlarge,
+            color: AppColors.customGrey,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.small),
+          const Text(AppStrings.podcastsEmpty, style: AppTextStyles.large),
+          const SizedBox(height: AppSpacing.xsmall),
           Text(
             _connectionType == ConnectionType.offline
-                ? 'Подключитесь к интернету для загрузки'
-                : 'Проверьте соединение и попробуйте снова',
+                ? AppStrings.podcastsConnectHint
+                : AppStrings.podcastsCheckConnection,
             style: AppTextStyles.mediumMuted,
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.medium),
           ElevatedButton(
             onPressed: _refreshPodcasts,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.customStyle,
-              foregroundColor: AppColors.customWhite,
-            ),
-            child: const Text('Загрузить подкасты', style: AppTextStyles.button),
+            child: const Text(AppStrings.podcastsLoad),
           ),
         ],
       ),
@@ -652,7 +650,7 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
       onRefresh: _refreshPodcasts,
       child: ListView.builder(
         controller: _scrollController,
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(AppSpacing.xsmall),
         itemCount: podcasts.length + (hasMore ? 1 : 0),
         itemBuilder: (context, index) {
           if (index == podcasts.length && hasMore) {
@@ -669,28 +667,24 @@ class _PodcastListScreenState extends State<PodcastListScreen> {
 
   Widget _buildLoadMoreIndicator() {
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(AppSpacing.small),
       child: Center(
         child: isLoadingMore
             ? Column(
                 children: [
                   const CircularProgressIndicator(),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.xsmall),
                   Text(
                     _connectionType == ConnectionType.mobile
-                        ? 'Загрузка... (может занять время)'
-                        : 'Загрузка...',
+                        ? AppStrings.loadingSlow
+                        : AppStrings.loading,
                     style: AppTextStyles.podcastMeta,
                   ),
                 ],
               )
             : ElevatedButton(
                 onPressed: _loadMorePodcasts,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.customStyle,
-                  foregroundColor: AppColors.customWhite,
-                ),
-                child: const Text('Загрузить еще', style: AppTextStyles.button),
+                child: const Text(AppStrings.loadMore),
               ),
       ),
     );

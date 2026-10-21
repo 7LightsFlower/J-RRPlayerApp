@@ -5,7 +5,13 @@ import 'package:just_audio/just_audio.dart';
 import 'package:provider/provider.dart';
 
 import 'package:jrrplayerapp/constants/app_colors.dart';
+import 'package:jrrplayerapp/constants/app_sizes.dart';
+import 'package:jrrplayerapp/constants/app_strings.dart';
 import 'package:jrrplayerapp/services/audio_player_service.dart';
+
+/// Насколько увеличивается пунктирное кольцо при старте воспроизведения.
+/// Это место заложено в размер виджета, чтобы кольцо не наезжало на соседей.
+const double _kPulseMaxScale = 1.15;
 
 class AnimatedRadioButton extends StatelessWidget {
   final double screenWidth;
@@ -14,7 +20,7 @@ class AnimatedRadioButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double buttonSize = screenWidth * 0.5;
+    final double buttonSize = screenWidth * AppDimens.radioButtonFactor;
 
     return Consumer<AudioPlayerService>(
       builder: (context, service, _) {
@@ -89,8 +95,14 @@ class AnimatedRadioButton extends StatelessWidget {
         ? AppColors.customStyle.withValues(alpha: isPlaying ? 0.15 : 0.05)
         : AppColors.customRed.withValues(alpha: 0.15);
 
+    // Реальный размер с учётом пульсации (Transform.scale не влияет на layout,
+    // поэтому раньше кольцо «вылезало» за свои границы)
+    final double boxSize = dashedCircleSize * _kPulseMaxScale;
+
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4),
+      margin: const EdgeInsets.symmetric(vertical: AppSpacing.xxsmall),
+      width: boxSize,
+      height: boxSize,
       child: Stack(
         alignment: Alignment.center,
         children: [
@@ -175,11 +187,13 @@ class _RotatingDashedCircleState extends State<_RotatingDashedCircle>
 
     _scaleAnimation = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween(begin: 1.0, end: 1.15).chain(CurveTween(curve: Curves.easeOutBack)),
+        tween: Tween(begin: 1.0, end: _kPulseMaxScale)
+            .chain(CurveTween(curve: Curves.easeOutBack)),
         weight: 50,
       ),
       TweenSequenceItem(
-        tween: Tween(begin: 1.15, end: 1.0).chain(CurveTween(curve: Curves.easeInOut)),
+        tween: Tween(begin: _kPulseMaxScale, end: 1.0)
+            .chain(CurveTween(curve: Curves.easeInOut)),
         weight: 50,
       ),
     ]).animate(_scaleController);
@@ -317,7 +331,7 @@ class _StaticIconButton extends StatelessWidget {
           alignment: Alignment.center,
           children: [
             Image.asset(
-              'assets/images/icon_jrockradio_custom_style.png',
+              AppAssets.radioButtonIcon,
               width: size,
               height: size,
               fit: BoxFit.contain,
@@ -329,7 +343,7 @@ class _StaticIconButton extends StatelessWidget {
                       ? AppColors.customStyle
                       : AppColors.customRed,
                 ),
-                strokeWidth: 2,
+                strokeWidth: AppDimens.progressStroke,
               ),
           ],
         ),

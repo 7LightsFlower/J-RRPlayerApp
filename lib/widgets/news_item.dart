@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
+import 'package:jrrplayerapp/constants/app_sizes.dart';
 import 'package:jrrplayerapp/constants/app_text_styles.dart';
 import 'package:jrrplayerapp/models/news.dart';
 import 'package:jrrplayerapp/ui/screens/news_detail_screen.dart';
@@ -11,26 +12,30 @@ class NewsItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final String title = news.title.trim();
+    final String excerpt = _excerpt(news.description, title);
+
     return Material(
       color: AppColors.customTransp,
       child: InkWell(
         onTap: () => _openNewsDetail(context),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppSpacing.small),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(news.date,style: AppTextStyles.newsDate),
+              Text(news.date, style: AppTextStyles.newsDate),
               if (news.imageUrl.isNotEmpty) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.xsmall),
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppRadius.xsmall),
                   child: AspectRatio(
-                    aspectRatio: 16 / 9,          // единые пропорции для всех картинок
+                    // единые пропорции для всех картинок
+                    aspectRatio: AppDimens.newsImageAspectRatio,
                     child: Image.network(
                       news.imageUrl,
                       width: double.infinity,
-                      fit: BoxFit.cover,          // заполняет всю рамку, обрезая края
+                      fit: BoxFit.cover, // заполняет рамку, обрезая края
                       alignment: Alignment.center,
                       errorBuilder: (_, __, ___) => Container(
                         color: AppColors.surfaceMuted,
@@ -38,7 +43,7 @@ class NewsItem extends StatelessWidget {
                           child: Icon(
                             Icons.image_not_supported_outlined,
                             color: AppColors.customGrey,
-                            size: 32,
+                            size: AppIconSizes.large,
                           ),
                         ),
                       ),
@@ -48,11 +53,10 @@ class NewsItem extends StatelessWidget {
                           color: AppColors.surfaceMuted,
                           child: const Center(
                             child: SizedBox(
-                              width: 20,
-                              height: 20,
+                              width: AppDimens.smallSpinner,
+                              height: AppDimens.smallSpinner,
                               child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppColors.customStyle,
+                                strokeWidth: AppDimens.progressStroke,
                               ),
                             ),
                           ),
@@ -62,18 +66,45 @@ class NewsItem extends StatelessWidget {
                   ),
                 ),
               ],
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.xsmall),
+
+              // Заголовок — как в карточке статьи (14, жирный, белый)
               Text(
-                _previewText(news.description),
-                style: AppTextStyles.medium,
-                maxLines: 3,
+                title.isNotEmpty ? title : excerpt,
+                style: AppTextStyles.mediumBold,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
+
+              // Описание — как в карточке статьи (12, серый, 1.35)
+              if (title.isNotEmpty && excerpt.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.compact),
+                Text(
+                  excerpt,
+                  style: AppTextStyles.podcastMetaTall,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ],
           ),
         ),
       ),
     );
+  }
+
+  /// Текст описания без повтора заголовка (в RSS описание часто
+  /// начинается с того же предложения, что и заголовок).
+  String _excerpt(String html, String title) {
+    String text = _previewText(html, maxChars: 400);
+    final String head =
+        title.replaceAll(RegExp(r'(…|\.\.\.)$'), '').trim();
+    if (head.isNotEmpty && text.startsWith(head)) {
+      text = text
+          .substring(head.length)
+          .replaceFirst(RegExp(r'^[\s.,:;!?…–—-]+'), '');
+    }
+    return text;
   }
 
   String _previewText(String html, {int maxChars = 180}) {

@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-// ignore: unused_import
-import 'package:jrrplayerapp/constants/app_colors.dart';
 import 'package:jrrplayerapp/constants/app_strings.dart';
 import 'package:jrrplayerapp/constants/app_theme.dart';
 import 'package:provider/provider.dart';
@@ -19,7 +17,8 @@ Future<void> main() async {
           create: (context) => AudioPlayerService()..initialize(),
         ),
         ChangeNotifierProvider<PodcastRepository>(
-          create: (context) => PodcastRepository(),
+          // Загружаем сохранённые позиции эпизодов сразу при старте
+          create: (context) => PodcastRepository()..loadPositionsFromStorage(),
         ),
       ],
       child: const MyApp(),
@@ -34,7 +33,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: AppStrings.radioName,
-      theme: AppTheme.theme,
+      theme: AppTheme.dark,
       home: const MainScreen(),
       debugShowCheckedModeBanner: false,
       routes: {

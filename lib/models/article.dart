@@ -5,7 +5,7 @@ class Article {
   final String imageUrl;
   final String description;
   final String url;
-  final String? category;   // ⬅ новое
+  final String? category;
 
   const Article({
     required this.id,

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
-import 'package:jrrplayerapp/constants/app_text_styles.dart';
+import 'package:jrrplayerapp/constants/app_sizes.dart';
 import 'package:jrrplayerapp/constants/app_strings.dart';
+import 'package:jrrplayerapp/constants/app_text_styles.dart';
 
 class AppBottomNav extends StatelessWidget {
   final int currentIndex;
@@ -30,19 +31,26 @@ class AppBottomNav extends StatelessWidget {
 
   // ==================== BOTTOM BAR (portrait) ====================
   Widget _buildBottomBar(BuildContext context, double width) {
-    final double iconSize = (width * 0.065).clamp(26.0, 30.0);
-    final double labelSize = (width * 0.028).clamp(9.0, 12.0);
-    final double verticalPadding = (width * 0.03).clamp(8.0, 14.0);
+    // Размеры масштабируются от ширины экрана в заданных пределах
+    final double iconSize = (width * 0.065)
+        .clamp(AppIconSizes.mediumPlus, AppIconSizes.mediumLarge);
+    final double labelSize = (width * 0.028)
+        .clamp(AppDimens.navLabelMin, AppDimens.navLabelMax);
+    final double verticalPadding =
+        (width * 0.03).clamp(AppSpacing.xsmall, AppSpacing.smallMid);
 
     return Container(
       padding: EdgeInsets.symmetric(
         vertical: verticalPadding,
-        horizontal: 8,
+        horizontal: AppSpacing.xsmall,
       ),
       decoration: const BoxDecoration(
         color: AppColors.appBarBackground,
         border: Border(
-          top: BorderSide(color: AppColors.appBarBorder, width: 1),
+          top: BorderSide(
+            color: AppColors.appBarBorder,
+            width: AppDimens.dividerThickness,
+          ),
         ),
       ),
       child: Row(
@@ -67,21 +75,18 @@ class AppBottomNav extends StatelessWidget {
     return Expanded(
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        // REMOVED: if (isActive) return;
         onTap: () => onTap?.call(index),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxsmall),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 icon,
-                color: isActive
-                    ? AppColors.customStyle
-                    : Colors.white.withValues(alpha: 0.5),
+                color: isActive ? AppColors.customStyle : AppColors.iconInactive,
                 size: iconSize,
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: AppSpacing.xxsmall),
               FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
@@ -103,14 +108,15 @@ class AppBottomNav extends StatelessWidget {
 
   // ==================== SIDE RAIL (landscape) ====================
   Widget _buildSideRail(BuildContext context) {
-    const double railWidth = 88.0;
-
     return Container(
-      width: railWidth,
+      width: AppDimens.navRailWidth,
       decoration: const BoxDecoration(
         color: AppColors.appBarBackground,
         border: Border(
-          left: BorderSide(color: AppColors.appBarBorder, width: 1),
+          left: BorderSide(
+            color: AppColors.appBarBorder,
+            width: AppDimens.dividerThickness,
+          ),
         ),
       ),
       child: SafeArea(
@@ -132,28 +138,25 @@ class AppBottomNav extends StatelessWidget {
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      // REMOVED: if (isActive) return;
       onTap: () => onTap?.call(index),
       child: Container(
-        width: 72,
-        padding: const EdgeInsets.symmetric(vertical: 14),
+        width: AppDimens.navRailItemWidth,
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.smallMid),
         decoration: BoxDecoration(
           color: isActive
               ? AppColors.customStyle.withValues(alpha: 0.12)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
+              : AppColors.customTransp,
+          borderRadius: BorderRadius.circular(AppRadius.card),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               icon,
-              color: isActive
-                  ? AppColors.customStyle
-                  : Colors.white.withValues(alpha: 0.5),
-              size: 26,
+              color: isActive ? AppColors.customStyle : AppColors.iconInactive,
+              size: AppIconSizes.mediumPlus,
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: AppSpacing.compact),
             Text(
               label,
               textAlign: TextAlign.center,

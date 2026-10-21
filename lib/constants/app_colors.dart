@@ -17,6 +17,9 @@ class AppColors {
   /// Цвет разделителей/границ у AppBar, табов, нижней навигации
   static const Color appBarBorder = Color(0xFF1C212B);
 
+  /// Разделители (Divider) — тот же цвет, что и границы AppBar
+  static const Color divider = appBarBorder;
+
   /// Фон карточек/элементов списка на тёмном фоне
   static const Color cardBackground = Color(0xFF1A1F29);
 
@@ -25,6 +28,9 @@ class AppColors {
 
   /// Неактивный трек слайдера / прогресс-бара
   static const Color sliderInactiveTrack = Color(0xFF2A3242);
+
+  /// Неактивная часть ползунка громкости в плеере
+  static const Color volumeTrackInactive = Color(0xFF2C2C2C);
 
   /// Неактивная точка в индикаторах карусели
   static const Color dotInactive = Color(0xFF3A4553);
@@ -37,6 +43,22 @@ class AppColors {
   static const Color textSubtle = Color(0xFF6E7787);
 
   static const Color iconMuted = Color(0xFF555555);
+
+  /// Вторичные иконки на тёмном (≈ Colors.white70)
+  static const Color iconSecondary = Color(0xB3FFFFFF);
+
+  /// Неактивные иконки навигации (белый 50%)
+  static const Color iconInactive = Color(0x80FFFFFF);
+
+  // ===== Оверлеи / градиенты поверх изображений =====
+  /// Полупрозрачная подложка кнопок поверх картинок (чёрный 40%)
+  static const Color overlayDark = Color(0x66000000);
+
+  /// Градиент карточки — низ (чёрный 90%)
+  static const Color gradientDarkStrong = Color(0xE6000000);
+
+  /// Градиент карточки — середина (чёрный 60%)
+  static const Color gradientDarkMedium = Color(0x99000000);
 
   // Акцентные цвета
   static const Color primary = Color(0xFF53B9C5);

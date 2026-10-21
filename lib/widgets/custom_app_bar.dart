@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
-import 'package:jrrplayerapp/constants/app_text_styles.dart';
+import 'package:jrrplayerapp/constants/app_sizes.dart';
 import 'package:jrrplayerapp/constants/app_strings.dart';
+import 'package:jrrplayerapp/constants/app_text_styles.dart';
 import 'package:jrrplayerapp/services/audio_player_service.dart';
 
 /// Единый трёхкнопочный AppBar.
@@ -25,7 +26,10 @@ class CustomAppBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.smallPlus,
+        vertical: AppSpacing.smallMinus,
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -35,15 +39,12 @@ class CustomAppBar extends StatelessWidget {
           ),
           Row(
             children: [
-              const Text(
-                AppStrings.appName,
-                style: AppTextStyles.brandTitle,
-              ),
-              const SizedBox(width: 8),
+              const Text(AppStrings.appName, style: AppTextStyles.brandTitle),
+              const SizedBox(width: AppSpacing.xsmall),
               Icon(
                 Icons.radio,
                 color: AppColors.customStyle.withValues(alpha: 0.8),
-                size: 18,
+                size: AppIconSizes.smallPlus,
               ),
             ],
           ),
@@ -60,17 +61,17 @@ class CustomAppBar extends StatelessWidget {
   Widget _buildSquareIconButton({
     required IconData icon,
     required VoidCallback onTap,
-    Color iconColor = Colors.white,
+    Color iconColor = AppColors.customWhite,
   }) {
     return Container(
-      width: 44,
-      height: 44,
+      width: AppDimens.appBarButton,
+      height: AppDimens.appBarButton,
       decoration: BoxDecoration(
-        color: const Color(0xFF1C212B),
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.appBarBorder,
+        borderRadius: BorderRadius.circular(AppRadius.card),
       ),
       child: IconButton(
-        icon: Icon(icon, color: iconColor, size: 22),
+        icon: Icon(icon, color: iconColor, size: AppIconSizes.appBarButton),
         onPressed: onTap,
         padding: EdgeInsets.zero,
       ),
@@ -84,9 +85,8 @@ class CustomAppBar extends StatelessWidget {
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.appBarBackground,
         title: const Text(
-          'Статус сигнала',
+          AppStrings.signalStatusTitle,
           style: AppTextStyles.mediumBold,
         ),
         content: Row(
@@ -94,11 +94,13 @@ class CustomAppBar extends StatelessWidget {
           children: [
             Icon(
               hasConnection ? Icons.wifi : Icons.wifi_off,
-              color: hasConnection ? AppColors.customStyle : Colors.redAccent,
+              color: hasConnection ? AppColors.customStyle : AppColors.customRed,
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: AppSpacing.smallMinus),
             Text(
-              hasConnection ? 'Подключено' : 'Нет соединения',
+              hasConnection
+                  ? AppStrings.signalConnected
+                  : AppStrings.signalDisconnected,
               style: AppTextStyles.medium,
             ),
           ],
@@ -106,7 +108,7 @@ class CustomAppBar extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('OK'),
+            child: const Text(AppStrings.ok),
           ),
         ],
       ),

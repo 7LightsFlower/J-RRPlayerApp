@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
+import 'package:jrrplayerapp/constants/app_sizes.dart';
 import 'package:jrrplayerapp/constants/app_strings.dart';
 import 'package:jrrplayerapp/constants/app_text_styles.dart';
 import 'package:jrrplayerapp/services/audio_player_service.dart';
@@ -41,7 +42,12 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   late final ValueNotifier<int> _imageUpdateNotifier;
   late ValueNotifier<double> _volumeNotifier;
 
-  AudioPlayer? _lastPlayer;   // ← добавить это поле
+  AudioPlayer? _lastPlayer;
+
+  /// Подписка на состояние воспроизведения и таймер синхронизации —
+  /// храним, чтобы отменить в dispose() (раньше они жили вечно).
+  StreamSubscription<dynamic>? _playbackSub;
+  Timer? _syncTimer;
 
   bool _isToggling = false;
 
@@ -55,7 +61,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
       _printRadioState();
     });
 
-    _audioService.playbackStateStream.listen((isPlaying) {
+    _playbackSub = _audioService.playbackStateStream.listen((isPlaying) {
       if (mounted && !_isToggling) {
         setState(() {
           _playingNotifier.value = isPlaying;
@@ -73,12 +79,8 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     _setupDurationSync();
     _setupPlayerStateListener();
 
-    Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-      _syncPlayerState();
+    _syncTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) _syncPlayerState();
     });
   }
 
@@ -204,7 +206,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
       }
     } catch (e) {
       debugPrint('🎵 Error in toggle play/pause: $e');
-      _showErrorSnackBar('Error: $e');
+      _showErrorSnackBar('${AppStrings.playbackError}: $e');
       _playingNotifier.value = isCurrentlyPlaying; // Откат
     } finally {
       // Снимаем спиннер через 500 мс, не дожидаясь окончания загрузки
@@ -267,7 +269,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
       await player?.setVolume(volume);
       _volumeNotifier.value = volume;
     } catch (e) {
-      _showErrorSnackBar('Error setting volume: $e');
+      _showErrorSnackBar('${AppStrings.volumeError}: $e');
     }
   }
 
@@ -278,7 +280,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
       final newVolume = (currentVolume + 0.1).clamp(0.0, 1.0);
       await _setVolume(newVolume);
     } catch (e) {
-      _showErrorSnackBar('Error increasing volume: $e');
+      _showErrorSnackBar('${AppStrings.volumeError}: $e');
     }
   }
 
@@ -287,16 +289,23 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
-    final maxPlayerHeight = screenHeight * 0.6;
-    final bool isCompact = maxPlayerHeight < 400;
+    final maxPlayerHeight = screenHeight * AppDimens.playerMaxHeightFactor;
+    final bool isCompact = maxPlayerHeight < AppDimens.playerCompactThreshold;
 
-    final double playButtonSize = isCompact ? 68.0 : 84.0;
-    final double skipIconSize = isCompact ? 32.0 : 38.0;
-    final double coverSize = isCompact ? 72.0 : 88.0;
+    final double playButtonSize = isCompact
+        ? AppDimens.playerPlayButtonCompact
+        : AppDimens.playerPlayButton;
+    final double skipIconSize =
+        isCompact ? AppDimens.playerSkipIconCompact : AppDimens.playerSkipIcon;
+    final double coverSize =
+        isCompact ? AppDimens.playerCoverCompact : AppDimens.playerCover;
 
-    final double smallSpacing = isCompact ? 4.0 : 8.0;
-    final double mediumSpacing = isCompact ? 10.0 : 16.0;
-    final double largeSpacing = isCompact ? 14.0 : 20.0;
+    final double smallSpacing =
+        isCompact ? AppSpacing.xxsmall : AppSpacing.xsmall;
+    final double mediumSpacing =
+        isCompact ? AppSpacing.xsmallPlus : AppSpacing.small;
+    final double largeSpacing =
+        isCompact ? AppSpacing.smallMid : AppSpacing.smallPlus;
 
     return ConstrainedBox(
       constraints: BoxConstraints(maxHeight: maxPlayerHeight),
@@ -335,8 +344,8 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                           BoxShadow(
                             color:
                                 AppColors.customStyle.withValues(alpha: 0.35),
-                            blurRadius: 20,
-                            spreadRadius: 2,
+                            blurRadius: AppDimens.playerGlowBlur,
+                            spreadRadius: AppDimens.playerGlowSpread,
                           ),
                         ],
                       ),
@@ -346,7 +355,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                                 width: playButtonSize * 0.4,
                                 height: playButtonSize * 0.4,
                                 child: const CircularProgressIndicator(
-                                  strokeWidth: 2,
+                                  strokeWidth: AppDimens.progressStroke,
                                   color: AppColors.customWhite,
                                 ),
                               )
@@ -397,17 +406,12 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                             width: coverSize,
                             height: coverSize,
                             decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(10),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: AppColors.customTransp,
-                                  blurRadius: 6,
-                                  offset: Offset(0, 3),
-                                ),
-                              ],
+                              borderRadius:
+                                  BorderRadius.circular(AppRadius.small),
                             ),
                             child: ClipRRect(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius:
+                                  BorderRadius.circular(AppRadius.small),
                               child: _buildCoverImage(metadata, imageVersion),
                             ),
                           );
@@ -426,12 +430,9 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                       children: [
                         Text(
                           AppStrings.stringPlaying,
-                          style: AppTextStyles.small.copyWith(
-                            color: AppColors.customWhite.withValues(alpha: 0.5),
-                            letterSpacing: 1.2,
-                          ),
+                          style: AppTextStyles.playerHeader,
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: AppSpacing.xxsmall),
 
                         ValueListenableBuilder<AudioMetadata?>(
                           valueListenable: _metadataNotifier,
@@ -440,15 +441,16 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                             return Text(
                               title,
                               style: AppTextStyles.playerTrackTitle.copyWith(
-                                fontSize: isCompact ? 18.0 : 22.0,
-                                fontWeight: FontWeight.w400,
+                                fontSize: isCompact
+                                    ? AppFontSizes.playerTitle
+                                    : AppFontSizes.largeTitle,
                               ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             );
                           },
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: AppSpacing.xxsmall),
 
                         ValueListenableBuilder<AudioMetadata?>(
                           valueListenable: _metadataNotifier,
@@ -491,9 +493,11 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                             _setVolume(0.0); 
                           }
                         },
-                        color: const Color(0xFF555555), 
-                        iconSize: 26, 
-                        tooltip: volume == 0.0 ? 'Включить звук' : 'Выключить звук',
+                        color: AppColors.iconMuted,
+                        iconSize: AppIconSizes.mediumPlus,
+                        tooltip: volume == 0.0
+                            ? AppStrings.volumeUnmute
+                            : AppStrings.volumeMute,
                       );
                     },
                   ),
@@ -508,14 +512,14 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                           data: SliderTheme.of(context).copyWith(
                             overlayShape: SliderComponentShape.noOverlay,
                             activeTrackColor: AppColors.customStyle,
-                            inactiveTrackColor: const Color(0xFF2C2C2C),
+                            inactiveTrackColor: AppColors.volumeTrackInactive,
                             thumbColor: AppColors.customStyle,
                             trackShape: const CustomRoundedSliderTrackShape(
-                              borderColor: Color(0xFF555555),
+                              borderColor: AppColors.iconMuted,
                             ),
-                            trackHeight: 8.0,
+                            trackHeight: AppDimens.volumeTrackHeight,
                             thumbShape: const RoundSliderThumbShape(
-                              enabledThumbRadius: 10.0,
+                              enabledThumbRadius: AppDimens.volumeThumbRadius,
                               elevation: 0,
                               pressedElevation: 0,
                             ),
@@ -536,7 +540,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                       },
                     ),
                   ),
-                  const SizedBox(width: 40),
+                  const SizedBox(width: AppDimens.volumeRightInset),
                 ],
               ),
             ),
@@ -607,10 +611,10 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     return Container(
       // Убрали черный цвет фона AppColors.appBarBackground, 
       // теперь если картинка прозрачная, будет виден фон плеера.
-      color: Colors.transparent, 
+      color: AppColors.customTransp,
       child: Center(
         child: Image.asset(
-          'assets/images/default_cover.png', 
+          AppAssets.defaultCover,
           fit: BoxFit.contain,
           gaplessPlayback: true, 
         ),
@@ -623,7 +627,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
       color: AppColors.cardBackground, // Для подкастов оставили темный фон
       child: Center(
         child: Image.asset(
-          'assets/images/default_cover.png', 
+          AppAssets.defaultCover,
           fit: BoxFit.contain,
           gaplessPlayback: true,
         ),
@@ -635,7 +639,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     try {
       await _audioService.playNextPodcast();
     } catch (e) {
-      _showErrorSnackBar('Error playing next podcast: $e');
+      _showErrorSnackBar('${AppStrings.nextEpisodeError}: $e');
     }
   }
 
@@ -643,12 +647,15 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     try {
       await _audioService.playPreviousPodcast();
     } catch (e) {
-      _showErrorSnackBar('Error playing previous podcast: $e');
+      _showErrorSnackBar('${AppStrings.previousEpisodeError}: $e');
     }
   }
 
   @override
   void dispose() {
+    _playbackSub?.cancel();
+    _syncTimer?.cancel();
+    _metadataNotifier.dispose();
     _playingNotifier.dispose();
     _positionNotifier.dispose();
     _durationNotifier.dispose();
@@ -731,7 +738,7 @@ class CustomRoundedSliderTrackShape extends SliderTrackShape with BaseSliderTrac
 
     // 2. Рисуем неактивную часть (правую)
     final Paint inactivePaint = Paint()
-      ..color = sliderTheme.inactiveTrackColor ?? Colors.transparent
+      ..color = sliderTheme.inactiveTrackColor ?? AppColors.customTransp
       ..style = PaintingStyle.fill;
 
     final Rect rightTrackRect = Rect.fromLTRB(
@@ -745,7 +752,7 @@ class CustomRoundedSliderTrackShape extends SliderTrackShape with BaseSliderTrac
 
     // 3. Рисуем активную часть (левую)
     final Paint activePaint = Paint()
-      ..color = sliderTheme.activeTrackColor ?? Colors.transparent
+      ..color = sliderTheme.activeTrackColor ?? AppColors.customTransp
       ..style = PaintingStyle.fill;
 
     final Rect leftTrackRect = Rect.fromLTRB(

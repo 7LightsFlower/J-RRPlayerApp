@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
+import 'package:jrrplayerapp/constants/app_sizes.dart';
+import 'package:jrrplayerapp/constants/app_strings.dart';
 import 'package:jrrplayerapp/constants/app_text_styles.dart';
 import 'package:jrrplayerapp/models/article.dart';
 import 'package:jrrplayerapp/ui/screens/articles_detail_screen.dart';
@@ -18,26 +20,30 @@ class ArticleItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String category = categoryLabel ?? article.category ?? 'Статья';
+    final String category =
+        categoryLabel ?? article.category ?? AppStrings.articleDefaultCategory;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      margin: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.smallMinus,
+        vertical: AppSpacing.compact,
+      ),
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.card),
       ),
       child: Material(
-        color: Colors.transparent,
+        color: AppColors.customTransp,
         child: InkWell(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppRadius.card),
           onTap: () => _openArticleDetail(context),
           child: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(AppSpacing.smallMinus),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 _buildThumbnail(),
-                const SizedBox(width: 12),
+                const SizedBox(width: AppSpacing.smallMinus),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -54,20 +60,18 @@ class ArticleItem extends StatelessWidget {
                       // Description
                       if (article.description.isNotEmpty &&
                           article.description != article.title) ...[
-                        const SizedBox(height: 6),
+                        const SizedBox(height: AppSpacing.compact),
                         Text(
                           article.description,
-                          style: AppTextStyles.podcastMeta.copyWith(
-                            height: 1.35,
-                          ),
+                          style: AppTextStyles.podcastMetaTall,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
 
-                      const SizedBox(height: 8),
+                      const SizedBox(height: AppSpacing.xsmall),
 
-                      // Date + category badge column
+                      // Date + category badge
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
@@ -78,18 +82,18 @@ class ArticleItem extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: AppSpacing.xxsmall),
                           _buildCategoryBadge(category),
                         ],
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: AppSpacing.xxsmall),
                 const Icon(
                   Icons.chevron_right,
-                  color: Colors.white,
-                  size: 22,
+                  color: AppColors.customWhite,
+                  size: AppIconSizes.appBarButton,
                 ),
               ],
             ),
@@ -101,12 +105,11 @@ class ArticleItem extends StatelessWidget {
 
   // ==================== THUMBNAIL ====================
   Widget _buildThumbnail() {
-    const double size = 96.0;
     return ClipRRect(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(AppRadius.small),
       child: SizedBox(
-        width: size,
-        height: size,
+        width: AppDimens.articleThumbnail,
+        height: AppDimens.articleThumbnail,
         child: article.imageUrl.isNotEmpty
             ? CachedNetworkImage(
                 imageUrl: article.imageUrl,
@@ -126,7 +129,7 @@ class ArticleItem extends StatelessWidget {
         child: Icon(
           Icons.article_outlined,
           color: AppColors.customStyle,
-          size: 32,
+          size: AppIconSizes.large,
         ),
       ),
     );
@@ -140,13 +143,13 @@ class ArticleItem extends StatelessWidget {
         Icon(
           _iconForCategory(category),
           color: AppColors.customStyle,
-          size: 14,
+          size: AppIconSizes.xsmall,
         ),
-        const SizedBox(width: 4),
+        const SizedBox(width: AppSpacing.xxsmall),
         Flexible(
           child: Text(
             category.toUpperCase(),
-            style: AppTextStyles.smallAccent.copyWith(letterSpacing: 0.6),
+            style: AppTextStyles.badge,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:jrrplayerapp/constants/app_text_styles.dart';
 import 'package:xml/xml.dart' as xml;
 import 'package:jrrplayerapp/constants/app_colors.dart';
+import 'package:jrrplayerapp/constants/app_sizes.dart';
+import 'package:jrrplayerapp/constants/app_strings.dart';
+import 'package:jrrplayerapp/constants/app_text_styles.dart';
 import 'package:jrrplayerapp/models/news.dart';
 import 'package:jrrplayerapp/widgets/news_item.dart';
-import 'package:jrrplayerapp/constants/app_strings.dart';
 
 class NewsFeedScreen extends StatefulWidget {
   const NewsFeedScreen({super.key});
@@ -64,7 +65,7 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
       }
 
       if (combined.isEmpty) {
-        throw Exception('Не удалось загрузить ни одного источника');
+        throw Exception(AppStrings.newsNoSources);
       }
 
       final Map<String, News> unique = {};
@@ -84,7 +85,7 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
     } catch (e) {
       debugPrint('❌ Ошибка загрузки новостей: $e');
       setState(() {
-        _error = 'Не удалось загрузить новости: $e';
+        _error = '${AppStrings.newsLoadError}: $e';
         _isLoading = false;
       });
     }
@@ -198,32 +199,25 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
     return SingleChildScrollView(
       child: Center(
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(AppSpacing.small),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Icon(
                 Icons.wifi_off,
-                size: 64,
+                size: AppIconSizes.xxlarge,
                 color: AppColors.customGrey,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.small),
               Text(
                 _error,
                 style: AppTextStyles.medium,
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.smallPlus),
               ElevatedButton(
                 onPressed: _loadNews,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.customStyle,
-                  foregroundColor: AppColors.customWhite,
-                ),
-                child: const Text(
-                  'Попробовать снова',
-                  style: AppTextStyles.button,
-                ),
+                child: const Text(AppStrings.tryAgain),
               ),
             ],
           ),
@@ -236,20 +230,17 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
     return SingleChildScrollView(
       child: Center(
         child: Padding(
-          padding: const EdgeInsets.all(32),
+          padding: const EdgeInsets.all(AppSpacing.large),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Icon(
                 Icons.article_outlined,
-                size: 64,
+                size: AppIconSizes.xxlarge,
                 color: AppColors.customGrey,
               ),
-              const SizedBox(height: 16),
-              Text(
-                'Новости не найдены',
-                style: AppTextStyles.mediumMuted,
-              ),
+              const SizedBox(height: AppSpacing.small),
+              Text(AppStrings.newsEmpty, style: AppTextStyles.mediumMuted),
             ],
           ),
         ),
@@ -260,24 +251,19 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.customBlack,
       body: RefreshIndicator(
         onRefresh: _loadNews,
-        color: AppColors.customStyle,
         child: _isLoading
-            ? const Center(
-                child: CircularProgressIndicator(
-                  valueColor:
-                      AlwaysStoppedAnimation<Color>(AppColors.customStyle),
-                ),
-              )
+            ? const Center(child: CircularProgressIndicator())
             : _error.isNotEmpty
                 ? _buildErrorWidget()
                 : _news.isEmpty
                     ? _buildEmptyWidget()
                     : ListView.builder(
                         controller: _scrollController,
-                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: AppSpacing.xsmall,
+                        ),
                         itemCount: _news.length,
                         itemBuilder: (ctx, index) {
                           return NewsItem(news: _news[index]);

@@ -7,10 +7,9 @@ class PodcastEpisode {
   final String? channelImageUrl;
   final DateTime publishedDate;
   final Duration? duration;
-  final String channelId; // Добавьте это поле
+  final String channelId;
   final String channelTitle;
-  
-  // Конструктор
+
   const PodcastEpisode({
     required this.id,
     required this.title,
@@ -20,11 +19,10 @@ class PodcastEpisode {
     this.channelImageUrl,
     required this.publishedDate,
     this.duration,
-    required this.channelId, // Добавьте это
+    required this.channelId,
     required this.channelTitle,
   });
-  
-  // Метод copyWith
+
   PodcastEpisode copyWith({
     String? id,
     String? title,
@@ -74,11 +72,13 @@ class PodcastEpisode {
       imageUrl: json['imageUrl'],
       channelImageUrl: json['channelImageUrl'],
       description: json['description'],
-      duration: Duration(seconds: json['duration']),
+      // duration может быть null (toJson пишет null, если длина неизвестна)
+      duration: json['duration'] is int
+          ? Duration(seconds: json['duration'] as int)
+          : null,
       publishedDate: DateTime.parse(json['publishedDate']),
       channelId: json['channelId'],
       channelTitle: json['channelTitle'],
     );
   }
-
 }

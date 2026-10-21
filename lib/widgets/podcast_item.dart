@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
+import 'package:jrrplayerapp/constants/app_sizes.dart';
+import 'package:jrrplayerapp/constants/app_strings.dart';
 import 'package:jrrplayerapp/constants/app_text_styles.dart';
 import 'package:jrrplayerapp/models/podcast.dart';
 import 'package:jrrplayerapp/services/audio_player_service.dart';
@@ -90,11 +92,11 @@ class _PodcastItemState extends State<PodcastItem> {
 
   // ==================== COVER IMAGE ====================
   Widget _buildCover() {
-    const double size = 76.0;
+    const double size = AppDimens.podcastCover;
     if (widget.podcast.imageUrl != null &&
         widget.podcast.imageUrl!.isNotEmpty) {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppRadius.xsmall),
         child: CachedNetworkImage(
           imageUrl: widget.podcast.imageUrl!,
           width: size,
@@ -113,13 +115,13 @@ class _PodcastItemState extends State<PodcastItem> {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: const Color(0xFF232A36),
-        borderRadius: BorderRadius.circular(8),
+        color: AppColors.surfaceMuted,
+        borderRadius: BorderRadius.circular(AppRadius.xsmall),
       ),
       child: const Icon(
         Icons.podcasts,
         color: AppColors.customStyle,
-        size: 32,
+        size: AppIconSizes.large,
       ),
     );
   }
@@ -143,7 +145,7 @@ class _PodcastItemState extends State<PodcastItem> {
       }
     } catch (e) {
       if (mounted) {
-        _showErrorSnackBar('Ошибка воспроизведения: $e');
+        _showErrorSnackBar('${AppStrings.playbackError}: $e');
       }
     } finally {
       if (mounted) {
@@ -165,7 +167,9 @@ class _PodcastItemState extends State<PodcastItem> {
         backgroundColor: AppColors.customRed,
         duration: const Duration(seconds: 3),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.xsmall),
+        ),
       ),
     );
   }
@@ -192,9 +196,8 @@ class _PodcastItemState extends State<PodcastItem> {
   /// line in white. The '|' itself is hidden.
   /// Falls back to plain white (single line) if there's no '|'.
   Widget _buildHighlightedTitle(String title) {
-    final TextStyle baseStyle = AppTextStyles.podcastTitle.copyWith(
-      height: 1.5,   // ← больше вертикального расстояния между строками
-    );
+    // Больше вертикального расстояния между строками
+    final TextStyle baseStyle = AppTextStyles.podcastTitleTall;
 
     final int barIndex = title.indexOf('|');
 
@@ -228,7 +231,7 @@ class _PodcastItemState extends State<PodcastItem> {
           if (suffix.isNotEmpty)
             TextSpan(
               text: suffix,
-              style: baseStyle.copyWith(color: Colors.white),
+              style: baseStyle.copyWith(color: AppColors.customWhite),
             ),
         ],
       ),
@@ -316,19 +319,25 @@ class _PodcastItemState extends State<PodcastItem> {
     }
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      margin: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.xsmall,
+        vertical: AppSpacing.xxsmall,
+      ),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1F29),
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(AppRadius.card),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xsmall,
+          vertical: AppSpacing.xxsmall,
+        ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ===== COVER =====
             _buildCover(),
-            const SizedBox(width: 12),
+            const SizedBox(width: AppSpacing.smallMinus),
 
             // ===== INFO + PROGRESS =====
             Expanded(
@@ -337,18 +346,22 @@ class _PodcastItemState extends State<PodcastItem> {
                 children: [
                   // Episode title with the segment before '|' highlighted in teal
                   _buildHighlightedTitle(widget.podcast.title),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: AppSpacing.compact),
 
                   // Progress bar (thin, teal, tappable via Slider)
                   SliderTheme(
                     data: SliderTheme.of(context).copyWith(
-                      trackHeight: 3,
-                      activeTrackColor: AppColors.customStyle,
-                      inactiveTrackColor: const Color(0xFF2A3242),
-                      thumbColor: AppColors.customStyle,
-                      overlayColor: AppColors.customStyle.withValues(alpha: 0.15),
-                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 4),
-                      overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                      // Цвета трека берутся из темы (AppTheme.sliderTheme),
+                      // здесь — только компактная геометрия
+                      trackHeight: AppDimens.podcastSliderTrack,
+                      overlayColor:
+                          AppColors.customStyle.withValues(alpha: 0.15),
+                      thumbShape: const RoundSliderThumbShape(
+                        enabledThumbRadius: AppDimens.podcastSliderThumb,
+                      ),
+                      overlayShape: const RoundSliderOverlayShape(
+                        overlayRadius: AppDimens.podcastSliderOverlay,
+                      ),
                     ),
                     child: Slider(
                       value: _sliderValue,
@@ -374,7 +387,7 @@ class _PodcastItemState extends State<PodcastItem> {
                           : null,
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: AppSpacing.xxxsmall),
 
                   // Time labels row
                   Row(
@@ -393,7 +406,7 @@ class _PodcastItemState extends State<PodcastItem> {
                 ],
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: AppSpacing.smallMinus),
 
             // ===== PLAY / PAUSE CIRCLE =====
             _buildPlayButton(
@@ -412,15 +425,18 @@ class _PodcastItemState extends State<PodcastItem> {
     required bool isBuffering,
     required VoidCallback onTap,
   }) {
-    const double size = 48.0;
+    const double size = AppDimens.podcastPlayButton;
 
     return SizedBox(
       width: size,
       height: size,
       child: Material(
-        color: Colors.transparent,
+        color: AppColors.customTransp,
         shape: const CircleBorder(
-          side: BorderSide(color: AppColors.customStyle, width: 2),
+          side: BorderSide(
+            color: AppColors.customStyle,
+            width: AppDimens.podcastPlayBorder,
+          ),
         ),
         child: InkWell(
           customBorder: const CircleBorder(),
@@ -428,13 +444,10 @@ class _PodcastItemState extends State<PodcastItem> {
           child: Center(
             child: (_isLoading || isBuffering)
                 ? const SizedBox(
-                    width: 20,
-                    height: 20,
+                    width: AppDimens.smallSpinner,
+                    height: AppDimens.smallSpinner,
                     child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        AppColors.customStyle,
-                      ),
+                      strokeWidth: AppDimens.progressStroke,
                     ),
                   )
                 : Icon(
@@ -442,7 +455,7 @@ class _PodcastItemState extends State<PodcastItem> {
                         ? Icons.pause_rounded
                         : Icons.play_arrow_rounded,
                     color: AppColors.customStyle,
-                    size: 30,
+                    size: AppIconSizes.mediumLarge,
                   ),
           ),
         ),

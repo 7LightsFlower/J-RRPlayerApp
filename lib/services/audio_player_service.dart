@@ -2,6 +2,7 @@ import 'package:audio_session/audio_session.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:jrrplayerapp/audio/audio_constants.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
 import 'package:jrrplayerapp/constants/app_strings.dart';
 import 'package:jrrplayerapp/repositories/podcast_repository.dart';
@@ -17,7 +18,7 @@ import 'package:jrrplayerapp/services/audio_player_handler.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform;
 
 class AudioMetadata {
-  static const String defaultCoverUrl = 'assets/images/default_cover.png';
+  static const String defaultCoverUrl = AppAssets.defaultCover;
 
   final String title;
   final String artist;
@@ -56,6 +57,16 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
   AudioMetadata? _currentMetadata;
   bool _isDisposed = false;
   bool _isInitialized = false;
+
+  /// Наблюдатель жизненного цикла должен быть зарегистрирован,
+  /// иначе didChangeAppLifecycleState никогда не вызывается.
+  bool _isObservingLifecycle = false;
+
+  /// Храним подписку, чтобы не плодить слушателей при повторной инициализации.
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
+
+  /// Ключ SharedPreferences для позиции эпизода
+  static const String _positionKeyPrefix = 'position_';
 
   // Для метаданных на Web
   Timer? _webMetadataTimer;
@@ -235,13 +246,13 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
       _audioHandler = await AudioService.init(
         builder: () => AudioPlayerHandler(this),
         config: AudioServiceConfig(
-          androidNotificationChannelId: 'com.jrrplayerapp.channel.audio',
+          androidNotificationChannelId: AppStrings.notificationChannelId,
           androidNotificationChannelName: AppStrings.radioName,
           androidNotificationOngoing: true,
           androidStopForegroundOnPause: false,
-          rewindInterval: const Duration(seconds: 30),
-          fastForwardInterval: const Duration(seconds: 30),
-          androidNotificationIcon: 'mipmap/ic_launcher',
+          rewindInterval: kPodcastRewindInterval,
+          fastForwardInterval: kPodcastFastForwardInterval,
+          androidNotificationIcon: AppStrings.notificationIcon,
           notificationColor: AppColors.customPurple,
           androidShowNotificationBadge: true,
         ),
@@ -286,6 +297,11 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
       debugPrint('🎵 Audio session configured to .playback (no mic)');
     } catch (e) {
       debugPrint('⚠️ Could not configure audio session: $e');
+    }
+
+    if (!_isObservingLifecycle) {
+      WidgetsBinding.instance.addObserver(this);
+      _isObservingLifecycle = true;
     }
 
     if (_isDisposed) {
@@ -354,8 +370,12 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
 
       final connectivityList = await _connectivity.checkConnectivity();
       _connectivityResult = connectivityList.isNotEmpty ? connectivityList.first : ConnectivityResult.none;
-      _connectivity.onConnectivityChanged.listen((result) {
-        _handleNetworkChange(result.first);
+      // .first падал на пустом списке — берём none по умолчанию
+      await _connectivitySub?.cancel();
+      _connectivitySub = _connectivity.onConnectivityChanged.listen((results) {
+        _handleNetworkChange(
+          results.isNotEmpty ? results.first : ConnectivityResult.none,
+        );
       });
 
       _isInitialized = true;
@@ -435,7 +455,7 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
   String getPreparedArtUrl(String? rawArtUrl) {
     if (rawArtUrl == null || rawArtUrl.isEmpty) {
       // Для дефолтной обложки всегда используем asset путь
-      return 'assets/images/default_cover.png';
+      return AppAssets.defaultCover;
     }
 
     // Если это уже готовый URL или asset путь
@@ -519,7 +539,7 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
       debugPrint('Fetching web metadata from Icecast API...');
 
       final response = await http.get(
-        Uri.parse('https://nradio.net/status-json.xsl'),
+        Uri.parse(AppStrings.icecastStatusUrl),
         headers: {
           'Accept': 'application/json',
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -649,13 +669,14 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
 
     final bool isInBackground = await _isAppInBackground();
     final query = Uri.encodeComponent('$artist $cleanTitle');
-    final url = 'https://itunes.apple.com/search?term=$query&media=music&entity=song&limit=1';
+    final url =
+        '${AppStrings.itunesSearchUrl}?term=$query&media=music&entity=song&limit=1';
 
     try {
       debugPrint('🔍 Searching iTunes for: $artist - $cleanTitle');
       final response = await http.get(
         Uri.parse(url),
-        headers: {'User-Agent': 'JRRPlayer/1.0'},
+        headers: {'User-Agent': AppStrings.httpUserAgent},
       ).timeout(isInBackground ? const Duration(seconds: 3) : const Duration(seconds: 8));
 
       if (response.statusCode == 200) {
@@ -687,7 +708,7 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
   Future<bool> _isAppInBackground() async {
     try {
       // Используем MethodChannel для проверки состояния приложения
-      const platform = MethodChannel('com.jrrplayerapp/app_lifecycle');
+      const platform = MethodChannel(AppStrings.lifecycleChannel);
       final bool result = await platform.invokeMethod('isInBackground') ?? false;
       return result;
     } catch (e) {
@@ -1036,7 +1057,7 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
           
           // Создаем MediaItem для радио
           const mediaItem = MediaItem(
-            id: 'jrr_live_stream',
+            id: AppStrings.radioMediaId,
             title: AppStrings.radioName,
             artist: AppStrings.radioTitle,
             album: AppStrings.radioAlbum,
@@ -1324,8 +1345,8 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
       final mediaItem = MediaItem(
         id: episode.id,
         title: episode.title,
-        artist: 'Подкаст J-Rock',
-        album: 'Подкасты',
+        artist: AppStrings.podcastArtist,
+        album: AppStrings.podcastChannelTitle,
         artUri: artUrl != null && artUrl.isNotEmpty ? Uri.parse(artUrl) : null,
         duration: episode.duration,
       );
@@ -1333,8 +1354,8 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
       // Создаём AudioMetadata для внутреннего использования
       final podcastMetadata = AudioMetadata(
         title: episode.title,
-        artist: 'Подкаст J-Rock',
-        album: 'Подкасты',
+        artist: AppStrings.podcastArtist,
+        album: AppStrings.podcastChannelTitle,
         artUrl: artUrl,
       );
 
@@ -1416,8 +1437,8 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
       final mediaItem = MediaItem(
         id: episode.id,
         title: episode.title,
-        artist: 'Подкаст J-Rock',
-        album: 'Подкасты',
+        artist: AppStrings.podcastArtist,
+        album: AppStrings.podcastChannelTitle,
         artUri: artUrl != null && artUrl.isNotEmpty ? Uri.parse(artUrl) : null,
         duration: episode.duration,
       );
@@ -1425,8 +1446,8 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
       // Создаём AudioMetadata для внутреннего использования
       final podcastMetadata = AudioMetadata(
         title: episode.title,
-        artist: 'Подкаст J-Rock',
-        album: 'Подкасты',
+        artist: AppStrings.podcastArtist,
+        album: AppStrings.podcastChannelTitle,
         artUrl: artUrl,
       );
 
@@ -1467,14 +1488,9 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
 
       // Обновляем background audio
       if (_audioHandler != null && _audioHandler is AudioPlayerHandler) {
-        (_audioHandler as AudioPlayerHandler).updateMetadata(
-          AudioMetadata(
-            title: episode.title,
-            artist: episode.channelTitle,
-            album: 'Подкасты',
-            artUrl: episode.imageUrl ?? episode.channelImageUrl,
-          )
-        );
+        // Те же метаданные, что выше (раньше здесь был другой artist →
+        // уведомление «мигало» между двумя вариантами)
+        (_audioHandler as AudioPlayerHandler).updateMetadata(podcastMetadata);
         (_audioHandler as AudioPlayerHandler).updatePlaybackState(true);
       }
 
@@ -1732,7 +1748,7 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
         final currentPosition = position ?? _player?.position ?? Duration.zero;
         final prefs = await SharedPreferences.getInstance();
         await prefs.setInt(
-          'position_${_currentEpisode!.id}', 
+          '$_positionKeyPrefix${_currentEpisode!.id}',
           currentPosition.inMilliseconds
         );
         debugPrint('Saved position for episode ${_currentEpisode!.id}: ${currentPosition.inSeconds}s');
@@ -1744,7 +1760,7 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
 
   Future<Duration> _getSavedPosition(String episodeId) async {
     final prefs = await SharedPreferences.getInstance();
-    final positionMs = prefs.getInt('position_$episodeId') ?? 0;
+    final positionMs = prefs.getInt('$_positionKeyPrefix$episodeId') ?? 0;
     return Duration(milliseconds: positionMs);
   }
 
@@ -1813,7 +1829,13 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
     await _audioHandler?.stop();
     _audioHandler = null;
 
-    WidgetsBinding.instance.removeObserver(this as WidgetsBindingObserver);
+    await _connectivitySub?.cancel();
+    _connectivitySub = null;
+
+    if (_isObservingLifecycle) {
+      WidgetsBinding.instance.removeObserver(this);
+      _isObservingLifecycle = false;
+    }
 
     super.dispose();
 
@@ -1823,6 +1845,6 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
   /// Возвращает URL дефолтной обложки для использования в фоновом режиме
   String getDefaultCoverUrlForBackground() {
     // Возвращаем уже подготовленный полный путь
-    return 'asset:///assets/images/default_cover.png';
+    return AppAssets.defaultCoverAssetUri;
   }
 }

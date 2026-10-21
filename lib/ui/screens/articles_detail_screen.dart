@@ -3,12 +3,29 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
+import 'package:jrrplayerapp/constants/app_sizes.dart';
+import 'package:jrrplayerapp/constants/app_strings.dart';
 import 'package:jrrplayerapp/constants/app_text_styles.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:jrrplayerapp/widgets/custom_app_bar.dart';
+
+/// JS, отключающий доступ страницы к микрофону.
+const String _disableMicJs = '''
+  (function() {
+    if (navigator.mediaDevices) {
+      navigator.mediaDevices.getUserMedia = function(constraints) {
+        return Promise.reject(new Error("Microphone not available"));
+      };
+    }
+    if (navigator.getUserMedia) {
+      navigator.getUserMedia = null;
+    }
+    console.log('Microphone access disabled by app');
+  })();
+''';
 
 class ArticleDetailScreen extends StatefulWidget {
   final String articleUrl;
@@ -17,7 +34,7 @@ class ArticleDetailScreen extends StatefulWidget {
   const ArticleDetailScreen({
     super.key,
     required this.articleUrl,
-    this.title = 'Статья',
+    this.title = AppStrings.articleDefaultTitle,
   });
 
   @override
@@ -57,64 +74,40 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
     final WebViewController controller =
         WebViewController.fromPlatformCreationParams(params);
 
-    controller.setJavaScriptMode(JavaScriptMode.unrestricted);
-
-    controller.addJavaScriptChannel(
-      'disableMic',
-      onMessageReceived: (JavaScriptMessage message) {},
-    );
-
-    controller.setNavigationDelegate(
-      NavigationDelegate(
-        onPageStarted: (String url) {
-          controller.runJavaScript('''
-            (function() {
-              if (navigator.mediaDevices) {
-                navigator.mediaDevices.getUserMedia = function(constraints) {
-                  return Promise.reject(new Error("Microphone not available"));
-                };
-              }
-              if (navigator.getUserMedia) {
-                navigator.getUserMedia = null;
-              }
-              console.log('Microphone access disabled by app');
-            })();
-          ''');
-          setState(() => _isLoading = true);
-        },
-        onProgress: (progress) {
-          setState(() {
-            _loadingProgress = progress / 100;
-          });
-        },
-        onPageFinished: (_) => setState(() => _isLoading = false),
-        onWebResourceError: (_) => setState(() => _isLoading = false),
-      ),
-    );
+    // Один NavigationDelegate: раньше второй вызов setNavigationDelegate
+    // затирал первый, и JS отключения микрофона не выполнялся.
+    controller
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(AppColors.customBackgr)
+      ..addJavaScriptChannel(
+        'disableMic',
+        onMessageReceived: (JavaScriptMessage message) {},
+      )
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageStarted: (_) {
+            controller.runJavaScript(_disableMicJs);
+            if (mounted) setState(() => _isLoading = true);
+          },
+          onProgress: (progress) {
+            if (mounted) setState(() => _loadingProgress = progress / 100);
+          },
+          onPageFinished: (_) {
+            if (mounted) setState(() => _isLoading = false);
+          },
+          onWebResourceError: (_) {
+            if (mounted) setState(() => _isLoading = false);
+          },
+        ),
+      );
 
     if (controller.platform is AndroidWebViewController) {
-      AndroidWebViewController.enableDebugging(true);
+      AndroidWebViewController.enableDebugging(kDebugMode);
       (controller.platform as AndroidWebViewController)
           .setMediaPlaybackRequiresUserGesture(false);
     }
 
-    controller
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(AppColors.customBackgr)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onProgress: (progress) {
-            setState(() {
-              _loadingProgress = progress / 100;
-            });
-          },
-          onPageStarted: (_) => setState(() => _isLoading = true),
-          onPageFinished: (_) => setState(() => _isLoading = false),
-          onWebResourceError: (_) => setState(() => _isLoading = false),
-        ),
-      )
-      ..loadRequest(Uri.parse(widget.articleUrl));
-
+    controller.loadRequest(Uri.parse(widget.articleUrl));
     _controller = controller;
   }
 
@@ -130,7 +123,6 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
     // ==================== ВЕБ-ВЕРСИЯ ====================
     if (kIsWeb) {
       return Scaffold(
-        backgroundColor: AppColors.customBackgr,
         body: SafeArea(
           child: Column(
             children: [
@@ -145,17 +137,17 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                     children: [
                       Icon(
                         Icons.open_in_browser,
-                        size: 80,
+                        size: AppIconSizes.emptyState,
                         color: AppColors.customWhite,
                       ),
-                      SizedBox(height: 24),
+                      SizedBox(height: AppSpacing.medium),
                       Text(
-                        'Открываем статью в новой вкладке...',
+                        AppStrings.articleOpeningInBrowser,
                         style: AppTextStyles.large,
                         textAlign: TextAlign.center,
                       ),
-                      SizedBox(height: 16),
-                      CircularProgressIndicator(color: AppColors.customStyle),
+                      SizedBox(height: AppSpacing.small),
+                      CircularProgressIndicator(),
                     ],
                   ),
                 ),
@@ -168,7 +160,6 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
 
     // ==================== МОБИЛЬНАЯ ВЕРСИЯ ====================
     return Scaffold(
-      backgroundColor: AppColors.customBackgr,
       body: SafeArea(
         child: Column(
           children: [
@@ -180,9 +171,6 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
               LinearProgressIndicator(
                 value: _loadingProgress,
                 backgroundColor: AppColors.customBackgr,
-                valueColor: const AlwaysStoppedAnimation<Color>(
-                  AppColors.customStyle,
-                ),
               ),
             Expanded(child: WebViewWidget(controller: _controller!)),
           ],

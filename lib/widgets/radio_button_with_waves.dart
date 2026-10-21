@@ -5,6 +5,8 @@ import 'package:just_audio/just_audio.dart';
 import 'package:provider/provider.dart';
 
 import 'package:jrrplayerapp/constants/app_colors.dart';
+import 'package:jrrplayerapp/constants/app_sizes.dart';
+import 'package:jrrplayerapp/constants/app_strings.dart';
 import 'package:jrrplayerapp/services/audio_player_service.dart';
 
 class RadioButtonWithWaves extends StatelessWidget {
@@ -14,13 +16,14 @@ class RadioButtonWithWaves extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double buttonSize = screenWidth * 0.5;
-    final audioService = context.read<AudioPlayerService>();
-    final player = audioService.getPlayer();
+    final double buttonSize = screenWidth * AppDimens.radioButtonFactor;
 
     return Consumer<AudioPlayerService>(
       builder: (context, service, _) {
         final bool hasConnection = service.hasNetworkConnection ?? true;
+        // Читаем плеер ВНУТРИ builder: иначе кнопка «залипает» в статичном
+        // состоянии, если плеер создаётся позже первого build.
+        final player = service.getPlayer();
 
         // Если плеер ещё не создан — рисуем кнопку в «спокойном» состоянии.
         if (player == null) {
@@ -80,7 +83,7 @@ class RadioButtonWithWaves extends StatelessWidget {
     final bool showGlow = isPlaying && !isBuffering && hasConnection;
 
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4),
+      margin: const EdgeInsets.symmetric(vertical: AppSpacing.xxsmall),
       child: Stack(
         alignment: Alignment.center,
         children: [
@@ -474,7 +477,7 @@ class _GlowingIconButtonState extends State<_GlowingIconButton>
           alignment: Alignment.center,
           children: [
             Image.asset(
-              'assets/images/icon_jrockradio_custom_style.png',
+              AppAssets.radioButtonIcon,
               width: size,
               height: size,
               fit: BoxFit.contain,
@@ -486,7 +489,7 @@ class _GlowingIconButtonState extends State<_GlowingIconButton>
                       ? AppColors.customWhite
                       : AppColors.customRed,
                 ),
-                strokeWidth: 2,
+                strokeWidth: AppDimens.progressStroke,
               ),
           ],
         ),

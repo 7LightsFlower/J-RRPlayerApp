@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
 
 /// Централизованные размеры шрифтов.
-/// Шкала: 10 / 11 / 12 / 14 / 16 / 18
+/// Шкала: 10 / 12 / 14 / 16 / 18 / 22
 class AppFontSizes {
   AppFontSizes._();
 
@@ -44,10 +44,13 @@ class AppTextStyles {
   );
 
   /// Мелкий серый текст (подписи, вспомогательное)
-  static TextStyle smallMuted = TextStyle(
+  static final TextStyle smallMuted = TextStyle(
     fontSize: AppFontSizes.small,
     color: AppColors.customWhite.withValues(alpha: 0.6),
   );
+
+  /// Мелкий серый с увеличенным межстрочным (описания в карточках)
+  static final TextStyle smallMutedTall = smallMuted.copyWith(height: 1.35);
 
   /// Мелкий акцентный (например, "СЕЙЧАС В ЭФИРЕ" в цвете customStyle)
   static const TextStyle smallAccent = TextStyle(
@@ -57,7 +60,15 @@ class AppTextStyles {
     color: AppColors.customStyle,
   );
 
-  // ==================== 11 — ТАБЫ / НАВИГАЦИЯ ====================
+  /// Бейдж категории статьи (акцентный, чуть плотнее)
+  static const TextStyle badge = TextStyle(
+    fontSize: AppFontSizes.small,
+    fontWeight: FontWeight.w600,
+    letterSpacing: 0.6,
+    color: AppColors.customStyle,
+  );
+
+  // ==================== 10 — ТАБЫ / НАВИГАЦИЯ ====================
   /// Активный таб (верхние табы, выбранный пункт)
   static const TextStyle tabActive = TextStyle(
     fontSize: AppFontSizes.tab,
@@ -67,7 +78,7 @@ class AppTextStyles {
   );
 
   /// Неактивный таб
-  static TextStyle tabInactive = TextStyle(
+  static final TextStyle tabInactive = TextStyle(
     fontSize: AppFontSizes.tab,
     fontWeight: FontWeight.normal,
     letterSpacing: 0.3,
@@ -82,7 +93,7 @@ class AppTextStyles {
   );
 
   /// Подпись нижней навигации — неактивная
-  static TextStyle navInactive = TextStyle(
+  static final TextStyle navInactive = TextStyle(
     fontSize: AppFontSizes.tab,
     fontWeight: FontWeight.normal,
     color: AppColors.customWhite.withValues(alpha: 0.5),
@@ -97,19 +108,25 @@ class AppTextStyles {
     height: 1.2,
   );
 
+  /// Название эпизода в карточке подкаста (две строки с воздухом)
+  static final TextStyle podcastTitleTall = podcastTitle.copyWith(height: 1.5);
+
   /// Название подкаста — приглушённое (например, прослушанное)
-  static TextStyle podcastTitleMuted = TextStyle(
+  static final TextStyle podcastTitleMuted = TextStyle(
     fontSize: AppFontSizes.smallMedium,
     color: AppColors.customWhite.withValues(alpha: 0.6),
     height: 1.2,
   );
 
   /// Мета-информация эпизода (дата, длительность)
-  static TextStyle podcastMeta = TextStyle(
+  static final TextStyle podcastMeta = TextStyle(
     fontSize: AppFontSizes.smallMedium,
     color: AppColors.customWhite.withValues(alpha: 0.5),
     height: 1.2,
   );
+
+  /// Описание в карточке статьи (12, серый, межстрочный 1.35)
+  static final TextStyle podcastMetaTall = podcastMeta.copyWith(height: 1.35);
 
   // ==================== 14 — СРЕДНИЙ ====================
   /// Обычный текст на белом
@@ -118,11 +135,21 @@ class AppTextStyles {
     color: AppColors.customWhite,
   );
 
+  /// Обычный белый текст абзацем (межстрочный 1.5) — тело новости
+  static const TextStyle mediumBody = TextStyle(
+    fontSize: AppFontSizes.medium,
+    color: AppColors.customWhite,
+    height: 1.5,
+  );
+
   /// Серый текст (исполнитель, описание)
-  static TextStyle mediumMuted = TextStyle(
+  static final TextStyle mediumMuted = TextStyle(
     fontSize: AppFontSizes.medium,
     color: AppColors.customWhite.withValues(alpha: 0.6),
   );
+
+  /// Серый текст абзацем (межстрочный 1.5) — описание «О радио»
+  static final TextStyle mediumMutedBody = mediumMuted.copyWith(height: 1.5);
 
   /// Жирный средний (для акцентов)
   static const TextStyle mediumBold = TextStyle(
@@ -148,7 +175,7 @@ class AppTextStyles {
   );
 
   /// Основной читаемый текст с межстрочным (абзацы, описания)
-  static TextStyle mediumReadable = TextStyle(
+  static final TextStyle mediumReadable = TextStyle(
     fontSize: AppFontSizes.medium,
     color: AppColors.customWhite.withValues(alpha: 0.7),
     height: 1.5,
@@ -191,10 +218,10 @@ class AppTextStyles {
     fontSize: AppFontSizes.large,
     fontWeight: FontWeight.w700,
     letterSpacing: 0.5,
-    color: Colors.white,
+    color: AppColors.customWhite,
   );
 
-  /// Дата новости (акцентная) 
+  /// Дата новости (акцентная)
   static const TextStyle newsDate = TextStyle(
     fontSize: AppFontSizes.small,
     fontWeight: FontWeight.w600,
@@ -209,27 +236,27 @@ class AppTextStyles {
     fontWeight: FontWeight.w600,
   );
 
-    // ==================== ПЛЕЕР ====================
-  
+  // ==================== ПЛЕЕР ====================
+
   // "СЕЙЧАС ИГРАЕТ" (маленький, разреженный, серый)
-  static TextStyle playerHeader = TextStyle(
+  static final TextStyle playerHeader = TextStyle(
     fontSize: AppFontSizes.small, // 10
     fontWeight: FontWeight.w600,
-    letterSpacing: 1.5, // Широкое расстояние между буквами
+    letterSpacing: 1.2, // Широкое расстояние между буквами
     color: AppColors.customWhite.withValues(alpha: 0.5),
   );
 
   // Название трека (крупное, жирное, белое)
-  static TextStyle playerTrackTitle = const TextStyle(
-    fontSize: AppFontSizes.playerTitle, // 18
-    fontWeight: FontWeight.w600, // Очень жирный (ExtraBold)
+  static const TextStyle playerTrackTitle = TextStyle(
+    fontSize: AppFontSizes.playerTitle, // 18 (22 в некомпактном режиме)
+    fontWeight: FontWeight.w400,
     letterSpacing: -0.5, // Немного сжимаем буквы для плотности
     color: AppColors.customWhite,
     height: 1.1,
   );
 
   // Исполнитель (средний, серый)
-  static TextStyle playerTrackArtist = TextStyle(
+  static final TextStyle playerTrackArtist = TextStyle(
     fontSize: AppFontSizes.smallMedium, // 12
     fontWeight: FontWeight.w400,
     color: AppColors.customWhite.withValues(alpha: 0.6),

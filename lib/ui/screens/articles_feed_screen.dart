@@ -1,16 +1,16 @@
 // lib/ui/screens/articles_feed_screen.dart
 
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:html/parser.dart' as parser;
 import 'package:html/dom.dart' as dom;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
+import 'package:jrrplayerapp/constants/app_sizes.dart';
+import 'package:jrrplayerapp/constants/app_strings.dart';
 import 'package:jrrplayerapp/constants/app_text_styles.dart';
 import 'package:jrrplayerapp/models/article.dart';
 import 'package:jrrplayerapp/widgets/article_item.dart';
-import 'package:jrrplayerapp/constants/app_strings.dart';
 import 'package:jrrplayerapp/ui/screens/articles_detail_screen.dart';
 
 class ArticlesFeedScreen extends StatefulWidget {
@@ -38,7 +38,9 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
   @override
   void initState() {
     super.initState();
-    _featuredController = PageController(viewportFraction: 0.92);
+    _featuredController = PageController(
+      viewportFraction: AppDimens.featuredViewportFraction,
+    );
     _loadArticles();
     _scrollController.addListener(_scrollListener);
   }
@@ -87,19 +89,20 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
     _autoScrollTimer?.cancel();
 
     try {
-      const base = AppStrings.articlesFeedUrl;
-      final url = kIsWeb ? AppStrings.proxyUrl('$base/') : '$base/';
-      final response = await AppStrings.getWithProxy(url);
+      // getWithProxy сам добавляет CORS-прокси в вебе —
+      // повторно оборачивать в proxyUrl не нужно (иначе двойной прокси).
+      final response =
+          await AppStrings.getWithProxy('${AppStrings.articlesFeedUrl}/');
 
       if (response.statusCode == 200) {
         _parseHtml(response.body, isFirstLoad: true);
         _startAutoScroll();
       } else {
-        throw Exception('Ошибка сервера: ${response.statusCode}');
+        throw Exception('${AppStrings.serverError}: ${response.statusCode}');
       }
     } catch (e) {
       setState(() {
-        _error = 'Нет подключения к интернету';
+        _error = AppStrings.noInternet;
         _isLoading = false;
       });
     }
@@ -111,11 +114,9 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
 
     try {
       final nextPage = _currentPage + 1;
-      const base = AppStrings.articlesFeedUrl;
-      final url = kIsWeb
-          ? AppStrings.proxyUrl('$base/p$nextPage')
-          : '$base/p$nextPage';
-      final response = await AppStrings.getWithProxy(url);
+      final response = await AppStrings.getWithProxy(
+        '${AppStrings.articlesFeedUrl}/p$nextPage',
+      );
 
       if (response.statusCode == 200) {
         _parseHtml(response.body, isFirstLoad: false);
@@ -199,7 +200,7 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
 
       final finalImageUrl = (imageUrl != null && imageUrl.isNotEmpty)
           ? imageUrl
-          : 'https://jrock.ru/favicon-32.png';
+          : AppStrings.articleFallbackImage;
 
       return Article(
         id: href,
@@ -208,7 +209,8 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
         imageUrl: finalImageUrl,
         description: description,
         url: _normalizeUrl(href),
-        category: category.isEmpty ? 'Статья' : category,
+        category:
+            category.isEmpty ? AppStrings.articleDefaultCategory : category,
       );
     } catch (e) {
       debugPrint('Ошибка парсинга (новая структура): $e');
@@ -244,7 +246,7 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
 
       final finalImageUrl = (imageUrl != null && imageUrl.isNotEmpty)
           ? imageUrl
-          : 'https://jrock.pro/wp-content/uploads/2023/01/jrock-logo.png';
+          : AppStrings.articleLegacyFallbackImage;
 
       return Article(
         id: url,
@@ -253,7 +255,7 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
         imageUrl: finalImageUrl,
         description: title,
         url: _normalizeUrl(url),
-        category: 'Статья',
+        category: AppStrings.articleDefaultCategory,
       );
     } catch (e) {
       debugPrint('Ошибка парсинга (старая структура): $e');
@@ -262,28 +264,21 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
   }
 
   String _normalizeUrl(String raw) {
+    const base = AppStrings.wwweblinkUrl;
     var u = raw.trim();
     if ((u.startsWith('"') && u.endsWith('"')) ||
         (u.startsWith("'") && u.endsWith("'"))) {
       u = u.substring(1, u.length - 1);
     }
     if (u.startsWith('//')) return 'https:$u';
-    if (u.startsWith('/')) return 'https://jrock.ru$u';
-    if (!u.startsWith('http')) return 'https://jrock.ru/$u';
+    if (u.startsWith('/')) return '$base$u';
+    if (!u.startsWith('http')) return '$base/$u';
     return u;
   }
 
   String _getCurrentDate() {
     final now = DateTime.now();
-    return '${now.day} ${_monthName(now.month)}';
-  }
-
-  String _monthName(int m) {
-    const months = [
-      '', 'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
-      'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря',
-    ];
-    return months[m];
+    return '${now.day} ${AppStrings.monthsGenitive[now.month]}';
   }
 
   @override
@@ -292,7 +287,7 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
     if (_error.isNotEmpty) return _buildError();
     if (_articles.isEmpty) {
       return Center(
-        child: Text('Пусто', style: AppTextStyles.smallMuted),
+        child: Text(AppStrings.articlesEmpty, style: AppTextStyles.smallMuted),
       );
     }
 
@@ -301,43 +296,46 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
 
     return RefreshIndicator(
       onRefresh: _loadArticles,
-      color: AppColors.customStyle,
       child: ListView(
         controller: _scrollController,
-        padding: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.only(bottom: AppSpacing.xsmall),
         children: [
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.xsmall),
 
           // ---------- FEATURED PAGEVIEW ----------
           SizedBox(
-            height: (MediaQuery.of(context).size.height * 0.38).clamp(200.0, 340.0),
+            height: (MediaQuery.of(context).size.height *
+                    AppDimens.featuredHeightFactor)
+                .clamp(AppDimens.featuredMinHeight, AppDimens.featuredMaxHeight),
             child: PageView.builder(
               controller: _featuredController,
               itemCount: featured.length,
               onPageChanged: (i) => setState(() => _featuredIndex = i),
               itemBuilder: (context, i) {
                 return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.compact,
+                  ),
                   child: _FeaturedArticleCard(article: featured[i]),
                 );
               },
             ),
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.xsmall),
 
           _buildDots(featured.length),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.smallMinus),
 
           // ---------- "НОВЫЕ МАТЕРИАЛЫ" HEADER ----------
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.small),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'НОВЫЕ МАТЕРИАЛЫ',
+                  AppStrings.articlesNewHeader,
                   style: AppTextStyles.small,
                 ),
                 GestureDetector(
@@ -351,12 +349,15 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
                   },
                   child: const Row(
                     children: [
-                      Text('Все материалы', style: AppTextStyles.smallAccent),
-                      SizedBox(width: 4),
+                      Text(
+                        AppStrings.articlesAll,
+                        style: AppTextStyles.smallAccent,
+                      ),
+                      SizedBox(width: AppSpacing.xxsmall),
                       Icon(
                         Icons.chevron_right,
                         color: AppColors.customStyle,
-                        size: 18,
+                        size: AppIconSizes.smallPlus,
                       ),
                     ],
                   ),
@@ -365,7 +366,7 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
             ),
           ),
 
-          const SizedBox(height: 4),
+          const SizedBox(height: AppSpacing.xxsmall),
 
           // ---------- REST OF THE LIST ----------
           ...rest.map((a) => ArticleItem(article: a)),
@@ -373,19 +374,18 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
           if (_hasMorePages)
             _isLoadingMore
                 ? const Padding(
-                    padding: EdgeInsets.all(20),
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        color: AppColors.customStyle,
-                      ),
-                    ),
+                    padding: EdgeInsets.all(AppSpacing.smallPlus),
+                    child: Center(child: CircularProgressIndicator()),
                   )
-                : const SizedBox(height: 20)
+                : const SizedBox(height: AppSpacing.smallPlus)
           else
             Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(AppSpacing.smallPlus),
               child: Center(
-                child: Text('Больше нет', style: AppTextStyles.smallMuted),
+                child: Text(
+                  AppStrings.articlesNoMore,
+                  style: AppTextStyles.smallMuted,
+                ),
               ),
             ),
         ],
@@ -400,9 +400,9 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
         final bool active = i == _featuredIndex;
         return AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          width: active ? 10 : 8,
-          height: active ? 10 : 8,
+          margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xxsmall),
+          width: active ? AppDimens.dotActive : AppDimens.dot,
+          height: active ? AppDimens.dotActive : AppDimens.dot,
           decoration: BoxDecoration(
             color: active ? AppColors.customStyle : AppColors.dotInactive,
             shape: BoxShape.circle,
@@ -413,9 +413,7 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
   }
 
   Widget _buildLoader() {
-    return const Center(
-      child: CircularProgressIndicator(color: AppColors.customStyle),
-    );
+    return const Center(child: CircularProgressIndicator());
   }
 
   Widget _buildError() {
@@ -423,21 +421,21 @@ class _ArticlesFeedScreenState extends State<ArticlesFeedScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.wifi_off, size: 80, color: AppColors.customGrey),
-          const SizedBox(height: 20),
+          const Icon(
+            Icons.wifi_off,
+            size: AppIconSizes.emptyState,
+            color: AppColors.customGrey,
+          ),
+          const SizedBox(height: AppSpacing.smallPlus),
           Text(
-            _error.isEmpty ? 'Нет интернета' : _error,
+            _error.isEmpty ? AppStrings.noInternetShort : _error,
             style: AppTextStyles.mediumMuted,
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: AppSpacing.smallPlus),
           ElevatedButton(
             onPressed: _loadArticles,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.customStyle,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Обновить', style: AppTextStyles.button),
+            child: const Text(AppStrings.refresh),
           ),
         ],
       ),
@@ -462,15 +460,14 @@ class _FeaturedArticleCard extends StatelessWidget {
         );
       },
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppRadius.medium),
         child: Stack(
           fit: StackFit.expand,
           children: [
             CachedNetworkImage(
               imageUrl: article.imageUrl,
               fit: BoxFit.cover,
-              placeholder: (_, __) =>
-                  Container(color: AppColors.surfaceMuted),
+              placeholder: (_, __) => Container(color: AppColors.surfaceMuted),
               errorWidget: (_, __, ___) =>
                   Container(color: AppColors.surfaceMuted),
             ),
@@ -481,9 +478,9 @@ class _FeaturedArticleCard extends StatelessWidget {
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
                   colors: [
-                    Color(0xE6000000),
-                    Color(0x99000000),
-                    Color(0x00000000),
+                    AppColors.gradientDarkStrong,
+                    AppColors.gradientDarkMedium,
+                    AppColors.customTransp,
                   ],
                   stops: [0.0, 0.45, 1.0],
                 ),
@@ -491,69 +488,67 @@ class _FeaturedArticleCard extends StatelessWidget {
             ),
 
             Positioned(
-              top: 12,
-              right: 12,
+              top: AppSpacing.smallMinus,
+              right: AppSpacing.smallMinus,
               child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.4),
+                width: AppDimens.overlayButton,
+                height: AppDimens.overlayButton,
+                decoration: const BoxDecoration(
+                  color: AppColors.overlayDark,
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
                   Icons.bookmark_border,
-                  color: Colors.white,
-                  size: 22,
+                  color: AppColors.customWhite,
+                  size: AppIconSizes.appBarButton,
                 ),
               ),
             ),
 
             Positioned(
-              left: 16,
-              right: 16,
-              bottom: 16,
+              left: AppSpacing.small,
+              right: AppSpacing.small,
+              bottom: AppSpacing.small,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    (article.category ?? 'Статья').toUpperCase(),
+                    (article.category ?? AppStrings.articleDefaultCategory)
+                        .toUpperCase(),
                     style: AppTextStyles.smallAccent,
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: AppSpacing.compact),
                   Text(
                     article.title,
                     style: AppTextStyles.mediumBold,
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.xsmall),
                   if (article.description.isNotEmpty)
                     Text(
                       article.description,
-                      style: AppTextStyles.smallMuted.copyWith(height: 1.35),
+                      style: AppTextStyles.smallMutedTall,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.smallMinus),
                   Row(
                     children: [
-                      Text(
-                        article.date,
-                        style: AppTextStyles.smallMuted,
-                      ),
+                      Text(article.date, style: AppTextStyles.smallMuted),
                       const Spacer(),
                       const Row(
                         children: [
                           Text(
-                            'Читать далее',
+                            AppStrings.readMore,
                             style: AppTextStyles.smallAccent,
                           ),
-                          SizedBox(width: 4),
+                          SizedBox(width: AppSpacing.xxsmall),
                           Icon(
                             Icons.arrow_forward,
                             color: AppColors.customStyle,
-                            size: 16,
+                            size: AppIconSizes.small,
                           ),
                         ],
                       ),
@@ -577,23 +572,21 @@ class AllArticlesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.customBackgr,
       appBar: AppBar(
-        backgroundColor: AppColors.appBarBackground,
-        foregroundColor: Colors.white,
-        elevation: 0,
         centerTitle: true,
-        title: const Text('Все материалы', style: AppTextStyles.appBarTitle),
+        title: const Text(AppStrings.articlesAll),
       ),
       body: articles.isEmpty
           ? Center(
-              child: Text('Пока ничего нет', style: AppTextStyles.mediumMuted),
+              child: Text(
+                AppStrings.articlesNothingYet,
+                style: AppTextStyles.mediumMuted,
+              ),
             )
           : ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.xsmall),
               itemCount: articles.length,
-              itemBuilder: (context, i) =>
-                  ArticleItem(article: articles[i]),
+              itemBuilder: (context, i) => ArticleItem(article: articles[i]),
             ),
     );
   }

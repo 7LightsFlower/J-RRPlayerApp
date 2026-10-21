@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:jrrplayerapp/constants/app_text_styles.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
-import 'package:jrrplayerapp/widgets/audio_player_widget.dart';
+import 'package:jrrplayerapp/constants/app_sizes.dart';
 import 'package:jrrplayerapp/constants/app_strings.dart';
+import 'package:jrrplayerapp/constants/app_text_styles.dart';
+import 'package:jrrplayerapp/widgets/audio_player_widget.dart';
 import 'package:jrrplayerapp/ui/screens/enlarged_tabs_screen.dart';
 import 'package:jrrplayerapp/widgets/animated_radio_button.dart';
 import 'package:jrrplayerapp/widgets/app_bottom_nav.dart';
@@ -39,7 +40,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
 
     _initializeAsync();
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
+      statusBarColor: AppColors.customTransp,
       statusBarIconBrightness: Brightness.light,
       systemNavigationBarColor: AppColors.customTransp,
       systemNavigationBarIconBrightness: Brightness.light,
@@ -61,20 +62,26 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     }
   }
 
+  void _onNavTap(int index) {
+    setState(() => _currentNavIndex = index);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EnlargedTabsScreen(initialIndex: index),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_isInitialized) {
       return const Scaffold(
-        backgroundColor: AppColors.customBackgr,
-        body: Center(
-          child: CircularProgressIndicator(color: AppColors.customStyle),
-        ),
+        body: Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: AppColors.customBackgr,
       drawer: _buildAppDrawer(),
       body: SafeArea(
         child: LayoutBuilder(
@@ -105,16 +112,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                   ),
                   AppBottomNav(
                     currentIndex: _currentNavIndex,
-                    onTap: (index) {
-                      setState(() => _currentNavIndex = index);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              EnlargedTabsScreen(initialIndex: index),
-                        ),
-                      );
-                    },
+                    onTap: _onNavTap,
                   ),
                 ],
               );
@@ -125,27 +123,16 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
               children: [
                 CustomAppBar(
                   leadingIcon: Icons.menu,
-                  onLeadingTap: () =>
-                      _scaffoldKey.currentState?.openDrawer(),
+                  onLeadingTap: () => _scaffoldKey.currentState?.openDrawer(),
                 ),
                 Expanded(
                   child: OrientationBuilder(
-                    builder: (context, orientation) =>
-                        _buildPortraitLayout(),
+                    builder: (context, orientation) => _buildPortraitLayout(),
                   ),
                 ),
                 AppBottomNav(
                   currentIndex: _currentNavIndex,
-                  onTap: (index) {
-                    setState(() => _currentNavIndex = index);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            EnlargedTabsScreen(initialIndex: index),
-                      ),
-                    );
-                  },
+                  onTap: _onNavTap,
                 ),
               ],
             );
@@ -162,24 +149,32 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       builder: (context, constraints) {
         final double availableWidth = constraints.maxWidth;
 
-        return SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: ConstrainedBox(
-            // Заставляем контент занять минимум всю доступную высоту экрана
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Column(
-              // Распределяем свободное пространство равномерно между элементами
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(top: 16),
-                  child: AnimatedRadioButton(screenWidth: availableWidth * 0.9),
+        // Плеер берёт столько, сколько ему нужно, логотип — всё остальное.
+        // Если места мало, логотип уменьшается (FittedBox), а не наезжает
+        // на кнопку Play. Раньше на невысоких экранах контент не помещался,
+        // spaceEvenly не находил свободного места и элементы «слипались».
+        return Column(
+          children: [
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(
+                  top: AppSpacing.small,
+                  // Запас под свечение кнопки Play (blur 20)
+                  bottom: AppSpacing.medium,
                 ),
-                const AudioPlayerWidget(),
-                const SizedBox(height: 16), // Небольшой отступ снизу
-              ],
+                child: Center(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: AnimatedRadioButton(
+                      screenWidth: availableWidth * 0.9,
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ),
+            const AudioPlayerWidget(),
+            const SizedBox(height: AppSpacing.small),
+          ],
         );
       },
     );
@@ -194,7 +189,10 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
         final double leftWidth = availableWidth * 0.4;
 
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.small,
+            vertical: AppSpacing.xsmall,
+          ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -216,7 +214,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                   ),
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: AppSpacing.small),
               // RIGHT: player
               const Expanded(
                 child: SingleChildScrollView(
@@ -234,7 +232,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   // ==================== APP DRAWER ====================
   Widget _buildAppDrawer() {
     return Drawer(
-      backgroundColor: AppColors.appBarBackground,
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
@@ -244,44 +241,37 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Icon(Icons.radio, color: AppColors.customStyle, size: 36),
-                SizedBox(height: 8),
-                Text(
-                  AppStrings.radioName,
-                  style: AppTextStyles.mediumBold,
+                Icon(
+                  Icons.radio,
+                  color: AppColors.customStyle,
+                  size: AppIconSizes.drawerHeader,
                 ),
+                SizedBox(height: AppSpacing.xsmall),
+                Text(AppStrings.radioName, style: AppTextStyles.mediumBold),
               ],
             ),
           ),
           ListTile(
-            leading: const Icon(Icons.info_outline, color: Colors.white70),
-            title: const Text(
-              'О радио',
-              style: AppTextStyles.medium,
-            ),
+            leading:
+                const Icon(Icons.info_outline, color: AppColors.iconSecondary),
+            title: const Text(AppStrings.menuAbout, style: AppTextStyles.medium),
             onTap: () {
               Navigator.pop(context);
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => const AboutScreen(),
-                ),
+                MaterialPageRoute(builder: (context) => const AboutScreen()),
               );
             },
           ),
           ListTile(
-            leading: const Icon(Icons.settings, color: Colors.white70),
-            title: const Text(
-              'Настройки',
-              style: AppTextStyles.medium,
-            ),
+            leading: const Icon(Icons.settings, color: AppColors.iconSecondary),
+            title:
+                const Text(AppStrings.menuSettings, style: AppTextStyles.medium),
             onTap: () {
               Navigator.pop(context);
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => const SettingsScreen(),
-                ),
+                MaterialPageRoute(builder: (context) => const SettingsScreen()),
               );
             },
           ),
@@ -332,44 +322,38 @@ class AboutScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.customBackgr,
-      appBar: AppBar(
-        backgroundColor: AppColors.appBarBackground,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        title: const Text('О радио', style: AppTextStyles.appBarTitle),
-      ),
+      appBar: AppBar(title: const Text(AppStrings.menuAbout)),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(AppSpacing.medium),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.small),
             Container(
-              width: 120,
-              height: 120,
+              width: AppDimens.aboutLogo,
+              height: AppDimens.aboutLogo,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: AppColors.appBarBackground,
                 border: Border.all(
                   color: AppColors.customStyle.withValues(alpha: 0.5),
-                  width: 2,
+                  width: AppDimens.aboutLogoBorder,
                 ),
                 boxShadow: [
                   BoxShadow(
                     color: AppColors.customStyle.withValues(alpha: 0.2),
-                    blurRadius: 30,
-                    spreadRadius: 4,
+                    blurRadius: AppDimens.aboutLogoBlur,
+                    spreadRadius: AppDimens.aboutLogoSpread,
                   ),
                 ],
               ),
               child: const Icon(
                 Icons.radio,
-                size: 56,
+                size: AppIconSizes.logo,
                 color: AppColors.customStyle,
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.medium),
 
             // Название радио — крупный заголовок
             const Text(
@@ -377,34 +361,41 @@ class AboutScreen extends StatelessWidget {
               style: AppTextStyles.large,
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.xsmall),
 
             // Версия — приглушённый
             Text(
-              'Версия 1.0.0',
+              '${AppStrings.aboutVersionLabel} ${AppStrings.appVersion}',
               style: AppTextStyles.mediumMuted,
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: AppSpacing.large),
 
             // Описание — читаемый абзац
             Text(
-              'Слушать, думать, жить\n'
-              'Человеку нужно место, где можно остановиться и подумать.'
-              'Без готовых ответов, правильных слов и необходимости соглашаться.'
-              'Здесь музыка соседствует с разговорами о человеке, Библии, истории, науке и жизни. '
-              'О том, что действительно важно, когда остаёшься один на один с собой. '
-              'Можно просто слушать. А можно вместе искать свои ответы. ',
-              style: AppTextStyles.mediumMuted.copyWith(height: 1.5),
+              AppStrings.aboutDescription,
+              style: AppTextStyles.mediumMutedBody,
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 32),
-            const Divider(color: Color(0xFF1C212B), thickness: 1),
-            const SizedBox(height: 16),
-            _buildInfoRow(Icons.copyright, 'Все права защищены', AppStrings.radioName),
-            const SizedBox(height: 12),
-            _buildInfoRow(Icons.code, 'Разработчик', 'Команда'),
-            const SizedBox(height: 12),
-            _buildInfoRow(Icons.web, 'Сайт', AppStrings.wwweblinkUrl),
+            const SizedBox(height: AppSpacing.large),
+            const Divider(),
+            const SizedBox(height: AppSpacing.small),
+            _buildInfoRow(
+              Icons.copyright,
+              AppStrings.aboutCopyright,
+              AppStrings.radioName,
+            ),
+            const SizedBox(height: AppSpacing.smallMinus),
+            _buildInfoRow(
+              Icons.code,
+              AppStrings.aboutDeveloper,
+              AppStrings.aboutDeveloperName,
+            ),
+            const SizedBox(height: AppSpacing.smallMinus),
+            _buildInfoRow(
+              Icons.web,
+              AppStrings.aboutWebsite,
+              AppStrings.wwweblinkUrl,
+            ),
           ],
         ),
       ),
@@ -414,21 +405,15 @@ class AboutScreen extends StatelessWidget {
   Widget _buildInfoRow(IconData icon, String label, String value) {
     return Row(
       children: [
-        Icon(icon, color: AppColors.customStyle, size: 20),
-        const SizedBox(width: 12),
+        Icon(icon, color: AppColors.customStyle, size: AppIconSizes.infoRow),
+        const SizedBox(width: AppSpacing.smallMinus),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                label,
-                style: AppTextStyles.smallMuted,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                value,
-                style: AppTextStyles.medium,
-              ),
+              Text(label, style: AppTextStyles.smallMuted),
+              const SizedBox(height: AppSpacing.xxxsmall),
+              Text(value, style: AppTextStyles.medium),
             ],
           ),
         ),
@@ -446,45 +431,40 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool _autoPlayOnStart = false;
-  bool _showNotifications = true;
-  bool _highQualityStream = true;
-  double _defaultVolume = 0.7;
+  // Значения по умолчанию
+  static const bool _defAutoPlay = false;
+  static const bool _defNotifications = true;
+  static const bool _defHighQuality = true;
+  static const double _defVolume = 0.7;
+
+  bool _autoPlayOnStart = _defAutoPlay;
+  bool _showNotifications = _defNotifications;
+  bool _highQualityStream = _defHighQuality;
+  double _defaultVolume = _defVolume;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.customBackgr,
-      appBar: AppBar(
-        backgroundColor: AppColors.appBarBackground,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        title: const Text('Настройки', style: AppTextStyles.appBarTitle),
-      ),
+      appBar: AppBar(title: const Text(AppStrings.menuSettings)),
       body: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xsmall),
         children: [
-          _buildSectionHeader('Воспроизведение'),
+          _buildSectionHeader(AppStrings.settingsPlayback),
           SwitchListTile(
             secondary: const Icon(
               Icons.play_circle_outline,
               color: AppColors.customStyle,
             ),
             title: const Text(
-              'Автовоспроизведение',
+              AppStrings.settingsAutoPlay,
               style: AppTextStyles.medium,
             ),
             subtitle: Text(
-              'Запускать радио при открытии приложения',
+              AppStrings.settingsAutoPlayHint,
               style: AppTextStyles.smallMuted,
             ),
             value: _autoPlayOnStart,
-            activeThumbColor: AppColors.customStyle,
-            onChanged: (value) {
-              setState(() {
-                _autoPlayOnStart = value;
-              });
-            },
+            onChanged: (value) => setState(() => _autoPlayOnStart = value),
           ),
           SwitchListTile(
             secondary: const Icon(
@@ -492,23 +472,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
               color: AppColors.customStyle,
             ),
             title: const Text(
-              'Высокое качество звука',
+              AppStrings.settingsHighQuality,
               style: AppTextStyles.medium,
             ),
             subtitle: Text(
-              'Использовать поток с более высоким битрейтом',
+              AppStrings.settingsHighQualityHint,
               style: AppTextStyles.smallMuted,
             ),
             value: _highQualityStream,
-            activeThumbColor: AppColors.customStyle,
-            onChanged: (value) {
-              setState(() {
-                _highQualityStream = value;
-              });
-            },
+            onChanged: (value) => setState(() => _highQualityStream = value),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.small,
+              vertical: AppSpacing.smallMinus,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -517,11 +495,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const Icon(
                       Icons.volume_up,
                       color: AppColors.customStyle,
-                      size: 20,
+                      size: AppIconSizes.infoRow,
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: AppSpacing.smallMinus),
                     const Text(
-                      'Громкость по умолчанию',
+                      AppStrings.settingsDefaultVolume,
                       style: AppTextStyles.medium,
                     ),
                     const Spacer(),
@@ -531,62 +509,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ],
                 ),
-                SliderTheme(
-                  data: SliderTheme.of(context).copyWith(
-                    activeTrackColor: AppColors.customStyle,
-                    inactiveTrackColor: AppColors.appBarBorder,
-                    thumbColor: AppColors.customStyle,
-                    overlayColor: AppColors.customStyle.withValues(alpha: 0.2),
-                    trackHeight: 4,
-                  ),
-                  child: Slider(
-                    value: _defaultVolume,
-                    onChanged: (value) {
-                      setState(() {
-                        _defaultVolume = value;
-                      });
-                    },
-                  ),
+                Slider(
+                  value: _defaultVolume,
+                  onChanged: (value) => setState(() => _defaultVolume = value),
                 ),
               ],
             ),
           ),
-          const Divider(color: Color(0xFF1C212B), thickness: 1),
-          _buildSectionHeader('Уведомления'),
+          const Divider(),
+          _buildSectionHeader(AppStrings.settingsNotifications),
           SwitchListTile(
             secondary: const Icon(
               Icons.notifications_outlined,
               color: AppColors.customStyle,
             ),
             title: const Text(
-              'Показывать уведомления',
+              AppStrings.settingsShowNotifications,
               style: AppTextStyles.medium,
             ),
             subtitle: Text(
-              'Отображать информацию о треке в шторке',
+              AppStrings.settingsShowNotificationsHint,
               style: AppTextStyles.smallMuted,
             ),
             value: _showNotifications,
-            activeThumbColor: AppColors.customStyle,
-            onChanged: (value) {
-              setState(() {
-                _showNotifications = value;
-              });
-            },
+            onChanged: (value) => setState(() => _showNotifications = value),
           ),
-          const Divider(color: Color(0xFF1C212B), thickness: 1),
-          _buildSectionHeader('Сброс'),
+          const Divider(),
+          _buildSectionHeader(AppStrings.settingsReset),
           ListTile(
-            leading: const Icon(
-              Icons.restore,
-              color: AppColors.customStyle,
-            ),
+            leading: const Icon(Icons.restore, color: AppColors.customStyle),
             title: const Text(
-              'Сбросить настройки',
+              AppStrings.settingsResetTitle,
               style: AppTextStyles.medium,
             ),
             subtitle: Text(
-              'Вернуть все параметры к значениям по умолчанию',
+              AppStrings.settingsResetHint,
               style: AppTextStyles.smallMuted,
             ),
             onTap: _resetSettings,
@@ -598,11 +555,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildSectionHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Text(
-        title.toUpperCase(),
-        style: AppTextStyles.smallAccent,
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.small,
+        AppSpacing.small,
+        AppSpacing.small,
+        AppSpacing.xsmall,
       ),
+      child: Text(title.toUpperCase(), style: AppTextStyles.smallAccent),
     );
   }
 
@@ -610,38 +569,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.appBarBackground,
-        title: const Text(
-          'Сбросить настройки?',
-          style: AppTextStyles.medium,
-        ),
-        content: Text(
-          'Все параметры будут возвращены к значениям по умолчанию.',
-          style: AppTextStyles.mediumMuted,
-        ),
+        title: const Text(AppStrings.settingsResetConfirmTitle),
+        content: const Text(AppStrings.settingsResetConfirmBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Отмена'),
+            child: const Text(AppStrings.cancel),
           ),
           TextButton(
             onPressed: () {
               setState(() {
-                _autoPlayOnStart = false;
-                _showNotifications = true;
-                _highQualityStream = true;
-                _defaultVolume = 0.7;
+                _autoPlayOnStart = _defAutoPlay;
+                _showNotifications = _defNotifications;
+                _highQualityStream = _defHighQuality;
+                _defaultVolume = _defVolume;
               });
               Navigator.pop(dialogContext);
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Настройки сброшены'),
+                  content: Text(AppStrings.settingsResetDone),
                   duration: Duration(seconds: 2),
                 ),
               );
             },
             child: const Text(
-              'Сбросить',
+              AppStrings.settingsResetConfirm,
               style: AppTextStyles.mediumAccent,
             ),
           ),

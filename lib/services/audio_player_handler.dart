@@ -28,6 +28,10 @@ class AudioPlayerHandler extends BaseAudioHandler {
   StreamSubscription<bool>? _playingSubscription;
   StreamSubscription<ProcessingState>? _processingSubscription;
 
+  /// К какому плееру / режиму сейчас привязаны подписки
+  AudioPlayer? _boundPlayer;
+  bool? _boundPodcastMode;
+
   // --- Блокировка команд и таймаут ---
   bool _isHandlingControl = false;
   Timer? _commandTimeoutTimer;
@@ -62,7 +66,7 @@ class AudioPlayerHandler extends BaseAudioHandler {
   Future<void> _initLocalDefaultCover() async {
     if (_cachedLocalDefaultCoverUri != null) return;
 
-    const assetPath = 'assets/images/default_cover.png';
+    const assetPath = AppAssets.defaultCover;
     final dir = await getApplicationDocumentsDirectory();
 
     // Имя файла содержит версию → при смене картинки меняется URI → кэш сбрасывается
@@ -82,7 +86,7 @@ class AudioPlayerHandler extends BaseAudioHandler {
     if (_cachedLocalDefaultCoverUri != null) {
       return _cachedLocalDefaultCoverUri!;
     }
-    return Uri.parse('asset:///assets/images/default_cover.png');
+    return Uri.parse(AppAssets.defaultCoverAssetUri);
   }
 
   void _onDefaultCoverReady() {
@@ -145,12 +149,22 @@ class AudioPlayerHandler extends BaseAudioHandler {
   // ==================== ПОДПИСКИ НА СОСТОЯНИЕ ПЛЕЕРА ====================
 
   void _setupStreams() {
+    final player = audioPlayerService.getPlayer();
+    final bool isPodcast = audioPlayerService.isPodcastMode;
+
+    // Переподписываемся ТОЛЬКО при смене плеера или режима.
+    // Раньше это происходило на каждом notifyListeners(): playingStream сразу
+    // отдаёт текущее значение → debounce → notifyListenersSafe() → снова сюда.
+    // Получался бесконечный цикл обновлений каждые ~300 мс.
+    if (player == _boundPlayer && isPodcast == _boundPodcastMode) return;
+    _boundPlayer = player;
+    _boundPodcastMode = isPodcast;
+
     _positionSubscription?.cancel();
     _durationSubscription?.cancel();
     _playingSubscription?.cancel();
     _processingSubscription?.cancel();
 
-    final player = audioPlayerService.getPlayer();
     if (player == null) return;
 
     // Playing and processing states are always needed
@@ -164,7 +178,7 @@ class AudioPlayerHandler extends BaseAudioHandler {
     });
 
     // --- Only for podcast: subscribe to position and duration ---
-    if (audioPlayerService.isPodcastMode) {
+    if (isPodcast) {
       _positionSubscription = player.positionStream.listen(_updatePlaybackPosition);
       _durationSubscription = player.durationStream.listen(_updatePlaybackDuration);
     } else {
@@ -219,7 +233,7 @@ class AudioPlayerHandler extends BaseAudioHandler {
 
     final bool isRadio = !audioPlayerService.isPodcastMode;
     final String mediaId = isRadio
-        ? 'jrr_live_stream'
+        ? AppStrings.radioMediaId
         : 'podcast_${audioPlayerService.currentEpisode?.id ?? DateTime.now().millisecondsSinceEpoch}';
 
     final Duration? duration = audioPlayerService.isPodcastMode
@@ -229,7 +243,6 @@ class AudioPlayerHandler extends BaseAudioHandler {
     final String preparedArtUrl = audioPlayerService.getPreparedArtUrl(metadata.artUrl);
     final Uri? artUri = _getArtUriForPlatform(preparedArtUrl);
     final bool isDefaultCover = metadata.artUrl.isEmpty ||
-        metadata.artUrl == 'assets/images/default_cover.png' ||
         metadata.artUrl == AudioMetadata.defaultCoverUrl;
 
     // --- Если обложка уже известна (не дефолтная), обновляем сразу ---
@@ -280,7 +293,7 @@ class AudioPlayerHandler extends BaseAudioHandler {
       _cancelPendingMetadata();
 
       final bool isRadio = !audioPlayerService.isPodcastMode;
-      final String mediaId = isRadio ? 'jrr_live_stream' : 
+      final String mediaId = isRadio ? AppStrings.radioMediaId : 
           'podcast_${audioPlayerService.currentEpisode?.id ?? DateTime.now().millisecondsSinceEpoch}';
 
       final String preparedArtUrl = audioPlayerService.getPreparedArtUrl(artUrl);
@@ -374,9 +387,7 @@ class AudioPlayerHandler extends BaseAudioHandler {
       return _artUriCache[artUrl];
     }
 
-    if (artUrl.isEmpty ||
-        artUrl == 'assets/images/default_cover.png' ||
-        artUrl == AudioMetadata.defaultCoverUrl) {
+    if (artUrl.isEmpty || artUrl == AudioMetadata.defaultCoverUrl) {
       final defaultUri = _getDefaultArtUri();
       final String cacheKey = artUrl;
       _artUriCache[cacheKey] = defaultUri;
@@ -454,12 +465,12 @@ class AudioPlayerHandler extends BaseAudioHandler {
     if (isPodcast) {
       controls.add(const MediaControl(
         androidIcon: 'drawable/ic_skip_previous',
-        label: 'Предыдущий',
+        label: AppStrings.ctrlPrevious,
         action: MediaAction.skipToPrevious,
       ));
       controls.add(const MediaControl(
         androidIcon: 'drawable/ic_rewind_30s',
-        label: '30 секунд назад',
+        label: AppStrings.ctrlRewind,
         action: MediaAction.rewind,
       ));
     }
@@ -467,31 +478,31 @@ class AudioPlayerHandler extends BaseAudioHandler {
     controls.add(isPlaying
         ? const MediaControl(
             androidIcon: 'drawable/ic_pause',
-            label: 'Пауза',
+            label: AppStrings.ctrlPause,
             action: MediaAction.pause,
           )
         : const MediaControl(
             androidIcon: 'drawable/ic_play',
-            label: 'Воспроизвести',
+            label: AppStrings.ctrlPlay,
             action: MediaAction.play,
           ));
 
     if (isPodcast) {
       controls.add(const MediaControl(
         androidIcon: 'drawable/ic_fast_forward_30s',
-        label: '30 секунд вперед',
+        label: AppStrings.ctrlForward,
         action: MediaAction.fastForward,
       ));
       controls.add(const MediaControl(
         androidIcon: 'drawable/ic_skip_next',
-        label: 'Следующий',
+        label: AppStrings.ctrlNext,
         action: MediaAction.skipToNext,
       ));
     }
 
     controls.add(const MediaControl(
       androidIcon: 'drawable/ic_stop',
-      label: 'Стоп',
+      label: AppStrings.ctrlStop,
       action: MediaAction.stop,
     ));
 
@@ -557,7 +568,7 @@ class AudioPlayerHandler extends BaseAudioHandler {
   void _updateInitialMediaItem() {
     const defaultCoverUrl = AudioMetadata.defaultCoverUrl;
     _currentMediaItem = MediaItem(
-      id: 'jrr_live_stream',
+      id: AppStrings.radioMediaId,
       title: AppStrings.radioName,
       artist: AppStrings.radioArtist,
       artUri: _getArtUriForPlatform(defaultCoverUrl),
@@ -702,6 +713,8 @@ class AudioPlayerHandler extends BaseAudioHandler {
     _playingSubscription?.cancel();
     _processingSubscription?.cancel();
     _positionSubscription = _durationSubscription = _playingSubscription = _processingSubscription = null;
+    _boundPlayer = null;
+    _boundPodcastMode = null;
 
     debugPrint('AudioPlayerHandler cleaned up');
   }
