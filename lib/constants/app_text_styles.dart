@@ -26,6 +26,8 @@ class AppFontSizes {
 
   /// 18 — название трека в плеере
   static const double playerTitle = 18.0;
+
+  static const double largeTitle = 22.0;
 }
 
 /// Готовые TextStyle-ы для типовых случаев.
@@ -211,7 +213,6 @@ class AppTextStyles {
   
   // "СЕЙЧАС ИГРАЕТ" (маленький, разреженный, серый)
   static TextStyle playerHeader = TextStyle(
-    fontFamily: 'Montserrat', // или 'Inter'
     fontSize: AppFontSizes.small, // 10
     fontWeight: FontWeight.w600,
     letterSpacing: 1.5, // Широкое расстояние между буквами
@@ -220,7 +221,6 @@ class AppTextStyles {
 
   // Название трека (крупное, жирное, белое)
   static TextStyle playerTrackTitle = const TextStyle(
-    fontFamily: 'Montserrat', // или 'Inter'
     fontSize: AppFontSizes.playerTitle, // 18
     fontWeight: FontWeight.w600, // Очень жирный (ExtraBold)
     letterSpacing: -0.5, // Немного сжимаем буквы для плотности
@@ -230,7 +230,6 @@ class AppTextStyles {
 
   // Исполнитель (средний, серый)
   static TextStyle playerTrackArtist = TextStyle(
-    fontFamily: 'Montserrat',
     fontSize: AppFontSizes.smallMedium, // 12
     fontWeight: FontWeight.w400,
     color: AppColors.customWhite.withValues(alpha: 0.6),

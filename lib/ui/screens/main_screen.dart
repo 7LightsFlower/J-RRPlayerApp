@@ -239,7 +239,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
         padding: EdgeInsets.zero,
         children: [
           const DrawerHeader(
-            decoration: BoxDecoration(color: Color(0xFF1C212B)),
+            decoration: BoxDecoration(color: AppColors.appBarBorder),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.end,
@@ -534,7 +534,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 SliderTheme(
                   data: SliderTheme.of(context).copyWith(
                     activeTrackColor: AppColors.customStyle,
-                    inactiveTrackColor: const Color(0xFF1C212B),
+                    inactiveTrackColor: AppColors.appBarBorder,
                     thumbColor: AppColors.customStyle,
                     overlayColor: AppColors.customStyle.withValues(alpha: 0.2),
                     trackHeight: 4,

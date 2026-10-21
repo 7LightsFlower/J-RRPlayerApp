@@ -33,6 +33,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: AppStrings.radioName,
       theme: ThemeData(
+        fontFamily: 'Montserrat', // <-- Глобально для всего приложения
         colorScheme: ColorScheme.fromSeed(seedColor: AppColors.customStyle),
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),

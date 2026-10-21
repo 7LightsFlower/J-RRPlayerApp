@@ -87,7 +87,7 @@ class CustomAppBar extends StatelessWidget {
         backgroundColor: AppColors.appBarBackground,
         title: const Text(
           'Статус сигнала',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: AppColors.customWhite),
         ),
         content: Row(
           mainAxisSize: MainAxisSize.min,
@@ -99,7 +99,7 @@ class CustomAppBar extends StatelessWidget {
             const SizedBox(width: 12),
             Text(
               hasConnection ? 'Подключено' : 'Нет соединения',
-              style: const TextStyle(color: Colors.white),
+              style: const TextStyle(color: AppColors.customWhite),
             ),
           ],
         ),

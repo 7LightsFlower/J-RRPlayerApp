@@ -36,6 +36,8 @@ class AppColors {
   /// Ещё тише (второстепенные даты, подписи)
   static const Color textSubtle = Color(0xFF6E7787);
 
+  static const Color iconMuted = Color(0xFF555555);
+
   // Акцентные цвета
   static const Color primary = Color(0xFF53B9C5);
   static const Color primaryDark = Color(0xFF3A8A92);
