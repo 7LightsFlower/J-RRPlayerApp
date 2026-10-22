@@ -1,180 +1,701 @@
-// lib/ui/screens/articles_detail_screen.dart
+import 'dart:async';
+import 'dart:math';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
 import 'package:jrrplayerapp/constants/app_sizes.dart';
 import 'package:jrrplayerapp/constants/app_strings.dart';
 import 'package:jrrplayerapp/constants/app_text_styles.dart';
-import 'package:webview_flutter/webview_flutter.dart';
-import 'package:webview_flutter_android/webview_flutter_android.dart';
-import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:jrrplayerapp/widgets/custom_app_bar.dart';
+import 'package:jrrplayerapp/repositories/podcast_repository.dart';
+import 'package:jrrplayerapp/services/audio_player_service.dart';
+import 'package:provider/provider.dart';
+import 'package:xml/xml.dart' as xml;
+import 'package:jrrplayerapp/models/podcast.dart';
+import 'package:jrrplayerapp/widgets/podcast_item.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-/// JS, отключающий доступ страницы к микрофону.
-const String _disableMicJs = '''
-  (function() {
-    if (navigator.mediaDevices) {
-      navigator.mediaDevices.getUserMedia = function(constraints) {
-        return Promise.reject(new Error("Microphone not available"));
-      };
+const int pageSize = 10;
+const String _rssCacheKey = 'cached_rss_response';
+const String _cacheTimestampKey = 'rss_cache_timestamp';
+const Duration cacheDuration = Duration(hours: 1);
+
+enum ConnectionType { wifi, mobile, offline }
+
+// ----------------------------------------------------------------------
+// Парсеры (только полный)
+// ----------------------------------------------------------------------
+
+List<PodcastEpisode> _parseRssFull(String responseBody) {
+  try {
+    final document = xml.XmlDocument.parse(responseBody);
+    var items = document.findAllElements('item').toList();
+    if (items.isEmpty) {
+      final channel = document.findAllElements('channel').firstOrNull;
+      items = channel?.findElements('item').toList() ?? [];
     }
-    if (navigator.getUserMedia) {
-      navigator.getUserMedia = null;
+
+    String? channelImageUrl;
+    final channel = document.findAllElements('channel').firstOrNull;
+    if (channel != null) {
+      final channelImage = channel.findElements('image').firstOrNull;
+      if (channelImage != null) {
+        final channelUrlElement = channelImage.findElements('url').firstOrNull;
+        if (channelUrlElement != null) {
+          channelImageUrl = channelUrlElement.innerText.trim();
+        }
+      }
+      if (channelImageUrl == null) {
+        final itunesImage = channel.findElements('itunes:image').firstOrNull;
+        if (itunesImage != null) {
+          channelImageUrl = itunesImage.getAttribute('href')?.trim();
+        }
+      }
     }
-    console.log('Microphone access disabled by app');
-  })();
-''';
 
-class ArticleDetailScreen extends StatefulWidget {
-  final String articleUrl;
-  final String title;
+    List<PodcastEpisode> podcasts = [];
 
-  const ArticleDetailScreen({
-    super.key,
-    required this.articleUrl,
-    this.title = AppStrings.articleDefaultTitle,
-  });
+    for (var item in items) {
+      try {
+        final titleElement = item.findElements('title').firstOrNull;
+        final enclosureElement = item.findElements('enclosure').firstOrNull;
+        if (titleElement == null || enclosureElement == null) continue;
+        final title = titleElement.innerText.trim();
+        final audioUrl = enclosureElement.getAttribute('url') ?? '';
+        if (audioUrl.isEmpty) continue;
 
-  @override
-  State<ArticleDetailScreen> createState() => _ArticleDetailScreenState();
+        final descriptionElement = item.findElements('description').firstOrNull;
+        final durationElement = item.findElements('itunes:duration').firstOrNull;
+        final guidElement = item.findElements('guid').firstOrNull;
+        final pubDateElement = item.findElements('pubDate').firstOrNull;
+
+        String? episodeImageUrl;
+        final itunesImage = item.findElements('itunes:image').firstOrNull;
+        if (itunesImage != null) {
+          episodeImageUrl = itunesImage.getAttribute('href')?.trim();
+        }
+        if (episodeImageUrl == null) {
+          final mediaThumbnail = item.findElements('media:thumbnail').firstOrNull;
+          if (mediaThumbnail != null) {
+            episodeImageUrl = mediaThumbnail.getAttribute('url')?.trim();
+          }
+        }
+        if (episodeImageUrl == null) {
+          final mediaContents = item.findElements('media:content');
+          for (var content in mediaContents) {
+            final type = content.getAttribute('type');
+            final url = content.getAttribute('url');
+            if (type?.startsWith('image/') == true && url != null) {
+              episodeImageUrl = url.trim();
+              break;
+            }
+          }
+        }
+        if (episodeImageUrl == null) {
+          final enclosures = item.findElements('enclosure');
+          for (var enclosure in enclosures) {
+            final type = enclosure.getAttribute('type');
+            final url = enclosure.getAttribute('url');
+            if (type?.startsWith('image/') == true && url != null) {
+              episodeImageUrl = url.trim();
+              break;
+            }
+          }
+        }
+
+        final description = descriptionElement?.innerText.trim() ?? '';
+        final durationString = durationElement?.innerText.trim() ?? '0:00:00';
+        final guid = guidElement?.innerText.trim() ??
+            '${podcasts.length}_${DateTime.now().millisecondsSinceEpoch}';
+        final duration = _parseDuration(durationString);
+        DateTime publishedDate = DateTime.now();
+        if (pubDateElement != null) {
+          publishedDate = _parseDate(pubDateElement.innerText.trim());
+        }
+
+        podcasts.add(PodcastEpisode(
+          id: guid,
+          title: title,
+          audioUrl: audioUrl,
+          imageUrl: episodeImageUrl,
+          channelImageUrl: channelImageUrl,
+          description: description,
+          duration: duration,
+          publishedDate: publishedDate,
+          channelId: AppStrings.podcastChannelId,
+          channelTitle: AppStrings.podcastChannelTitle,
+        ));
+      } catch (e) {
+        continue;
+      }
+    }
+    return podcasts;
+  } catch (e) {
+    debugPrint('Full parse error: $e');
+    return [];
+  }
 }
 
-class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
-  late final WebViewController? _controller;
-  bool _isLoading = true;
-  double _loadingProgress = 0.0;
+Duration _parseDuration(String durationString) {
+  try {
+    if (!durationString.contains(':')) {
+      final seconds = int.tryParse(durationString) ?? 0;
+      return Duration(seconds: seconds);
+    }
+    final parts = durationString.split(':');
+    if (parts.length == 2) {
+      final minutes = int.tryParse(parts[0]) ?? 0;
+      final seconds = int.tryParse(parts[1]) ?? 0;
+      return Duration(minutes: minutes, seconds: seconds);
+    } else if (parts.length >= 3) {
+      final hours = int.tryParse(parts[0]) ?? 0;
+      final minutes = int.tryParse(parts[1]) ?? 0;
+      final seconds = int.tryParse(parts[2]) ?? 0;
+      return Duration(hours: hours, minutes: minutes, seconds: seconds);
+    }
+    return Duration.zero;
+  } catch (e) {
+    return Duration.zero;
+  }
+}
+
+DateTime _parseDate(String dateString) {
+  try {
+    return DateTime.parse(dateString);
+  } catch (e) {
+    try {
+      final parts = dateString.split(' ');
+      if (parts.length >= 3) {
+        final day = int.tryParse(parts[1]) ?? 1;
+        final month = _parseMonth(parts[2]);
+        final year = int.tryParse(parts[3]) ?? DateTime.now().year;
+        return DateTime(year, month, day);
+      }
+    } catch (e2) {
+      // Игнорируем ошибки парсинга, используем текущую дату
+    }
+    return DateTime.now();
+  }
+}
+
+int _parseMonth(String month) {
+  const months = {
+    'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4,
+    'May': 5, 'Jun': 6, 'Jul': 7, 'Aug': 8,
+    'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
+  };
+  return months[month] ?? 1;
+}
+
+// ----------------------------------------------------------------------
+// Экран
+// ----------------------------------------------------------------------
+
+class PodcastListScreen extends StatefulWidget {
+  const PodcastListScreen({super.key});
+
+  @override
+  State<PodcastListScreen> createState() => _PodcastListScreenState();
+}
+
+class _PodcastListScreenState extends State<PodcastListScreen> {
+  List<PodcastEpisode> podcasts = [];
+  bool isLoading = true;
+  bool isLoadingMore = false;
+  bool hasMore = true;
+  String errorMessage = '';
+
+  bool _isDownloading = false;
+  String _downloadStatus = '';
+  ConnectionType _connectionType = ConnectionType.offline;
+
+  final ScrollController _scrollController = ScrollController();
+  final Connectivity _connectivity = Connectivity();
+
+  late StreamSubscription<List<ConnectivityResult>> _connectivitySubscription;
+  Timer? _statusUpdateTimer;
 
   @override
   void initState() {
     super.initState();
+    _initApp();
+  }
 
-    if (!kIsWeb) {
-      _initializeWebView();
+  Future<void> _initApp() async {
+    await _initConnectivity();
+
+    _connectivitySubscription =
+        _connectivity.onConnectivityChanged.listen(_handleConnectivityResult);
+    _scrollController.addListener(_scrollListener);
+
+    await _loadCachedData();
+
+    if (_connectionType != ConnectionType.offline) {
+      _fetchFreshData();
+    } else if (mounted && podcasts.isEmpty) {
+      // Нет сети и нет кеша — показываем подсказку, а не вечный спиннер
+      setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> _initConnectivity() async {
+    try {
+      final result = await _connectivity.checkConnectivity();
+      _handleConnectivityResult(result);
+    } catch (e) {
+      debugPrint('Connectivity check error: $e');
+    }
+  }
+
+  void _handleConnectivityResult(dynamic result) {
+    List<ConnectivityResult> results;
+    if (result is List<ConnectivityResult>) {
+      results = result;
+    } else if (result is ConnectivityResult) {
+      results = [result];
     } else {
-      Future.delayed(const Duration(milliseconds: 100), () {
-        _openInBrowser();
+      results = [];
+    }
+    _updateConnectionType(results);
+  }
+
+  /// Тип соединения по ВСЕМУ списку. Раньше побеждал последний элемент,
+  /// и, например, [wifi, vpn] считалось «нет сети».
+  void _updateConnectionType(List<ConnectivityResult> results) {
+    final ConnectionType type;
+    if (results.contains(ConnectivityResult.wifi)) {
+      type = ConnectionType.wifi;
+    } else if (results.contains(ConnectivityResult.mobile)) {
+      type = ConnectionType.mobile;
+    } else if (results.isEmpty ||
+        results.every((r) => r == ConnectivityResult.none)) {
+      type = ConnectionType.offline;
+    } else {
+      // ethernet, vpn, other … — сеть есть
+      type = ConnectionType.wifi;
+    }
+    if (!mounted) return;
+    setState(() => _connectionType = type);
+    debugPrint('🔌 Connection type: $_connectionType');
+  }
+
+  Future<void> _loadCachedData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedData = prefs.getString(_rssCacheKey);
+      if (cachedData != null) {
+        _updateStatus(AppStrings.podcastLoadingCache);
+        List<PodcastEpisode> cachedPodcasts;
+        if (kIsWeb) {
+          cachedPodcasts = _parseRssFull(cachedData);
+        } else {
+          cachedPodcasts = await compute(_parseRssFull, cachedData)
+              .timeout(const Duration(seconds: 3), onTimeout: () => []);
+        }
+        if (cachedPodcasts.isNotEmpty && mounted) {
+          final podcastRepo =
+              Provider.of<PodcastRepository>(context, listen: false);
+          podcastRepo.setEpisodes(cachedPodcasts);
+          cachedPodcasts
+              .sort((a, b) => b.publishedDate.compareTo(a.publishedDate));
+          setState(() {
+            podcasts = cachedPodcasts.take(pageSize).toList();
+            isLoading = false;
+            hasMore = cachedPodcasts.length > pageSize;
+            errorMessage = '';
+          });
+          debugPrint('📂 Загружено ${podcasts.length} эпизодов из кеша');
+          return;
+        }
+      }
+      if (mounted) {
+        setState(() {
+          isLoading = true;
+          errorMessage = '';
+        });
+        debugPrint('📂 Кеш не найден, ожидаем загрузки из сети');
+      }
+    } catch (e) {
+      debugPrint('Cache load error: $e');
+      if (mounted) {
+        setState(() {
+          isLoading = true;
+          errorMessage = '';
+        });
+      }
+    }
+  }
+
+  Future<void> _fetchFreshData() async {
+    if (!mounted) return;
+    if (_connectionType == ConnectionType.offline) return;
+
+    final podcastRepo = Provider.of<PodcastRepository>(context, listen: false);
+
+    try {
+      _isDownloading = true;
+      _startStatusUpdates();
+
+      final response =
+          await AppStrings.getWithProxy(AppStrings.podcastRssOriginalUrl);
+      final responseBody = response.body;
+      debugPrint('📡 RSS получен, длина: ${responseBody.length}');
+
+      List<PodcastEpisode> freshPodcasts;
+      if (kIsWeb) {
+        freshPodcasts = _parseRssFull(responseBody);
+      } else {
+        freshPodcasts = await compute(_parseRssFull, responseBody)
+            .timeout(const Duration(seconds: 10), onTimeout: () => []);
+      }
+
+      if (!mounted) return;
+
+      if (freshPodcasts.isNotEmpty) {
+        await _saveToCache(responseBody);
+
+        podcastRepo.setEpisodes(freshPodcasts);
+        freshPodcasts
+            .sort((a, b) => b.publishedDate.compareTo(a.publishedDate));
+
+        setState(() {
+          podcasts = freshPodcasts.take(pageSize).toList();
+          hasMore = freshPodcasts.length > pageSize;
+          errorMessage = '';
+          if (isLoading) isLoading = false;
+        });
+        debugPrint('✅ Загружено ${freshPodcasts.length} эпизодов из сети');
+      } else {
+        if (podcasts.isEmpty) {
+          setState(() {
+            errorMessage = AppStrings.podcastEmptyResponse;
+            isLoading = false;
+          });
+        } else {
+          setState(() {
+            errorMessage = AppStrings.podcastUpdateFailedCached;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Fetch fresh data error: $e');
+      if (mounted) {
+        if (podcasts.isEmpty) {
+          setState(() {
+            errorMessage = '${AppStrings.podcastLoadError}: $e';
+            isLoading = false;
+          });
+        } else {
+          setState(() {
+            errorMessage = AppStrings.podcastShowingCache;
+          });
+        }
+      }
+    } finally {
+      _isDownloading = false;
+      _stopStatusUpdates();
+    }
+  }
+
+  Future<void> _refreshPodcasts() async {
+    if (!mounted) return;
+    if (_connectionType == ConnectionType.offline) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text(AppStrings.noInternet)),
+      );
+      return;
+    }
+    await _fetchFreshData();
+  }
+
+  Future<void> _saveToCache(String rssData) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_rssCacheKey, rssData);
+      await prefs.setString(
+          _cacheTimestampKey, DateTime.now().toIso8601String());
+      debugPrint('💾 Cache saved');
+    } catch (e) {
+      debugPrint('Cache save error: $e');
+    }
+  }
+
+  void _startStatusUpdates() {
+    _statusUpdateTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
+      if (_isDownloading && mounted) {
+        setState(() {
+          _downloadStatus = _getRandomStatusMessage();
+        });
+      } else {
+        timer.cancel();
+      }
+    });
+  }
+
+  void _stopStatusUpdates() {
+    _statusUpdateTimer?.cancel();
+    _statusUpdateTimer = null;
+    if (mounted) {
+      setState(() {
+        _downloadStatus = '';
       });
     }
   }
 
-  void _initializeWebView() {
-    late final PlatformWebViewControllerCreationParams params;
-
-    if (WebViewPlatform.instance is WebKitWebViewPlatform) {
-      params = WebKitWebViewControllerCreationParams(
-        allowsInlineMediaPlayback: true,
-        mediaTypesRequiringUserAction: const <PlaybackMediaTypes>{},
-      );
-    } else {
-      params = const PlatformWebViewControllerCreationParams();
-    }
-
-    final WebViewController controller =
-        WebViewController.fromPlatformCreationParams(params);
-
-    // Один NavigationDelegate: раньше второй вызов setNavigationDelegate
-    // затирал первый, и JS отключения микрофона не выполнялся.
-    controller
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(AppColors.customBackgr)
-      ..addJavaScriptChannel(
-        'disableMic',
-        onMessageReceived: (JavaScriptMessage message) {},
-      )
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageStarted: (_) {
-            controller.runJavaScript(_disableMicJs);
-            if (mounted) setState(() => _isLoading = true);
-          },
-          onProgress: (progress) {
-            if (mounted) setState(() => _loadingProgress = progress / 100);
-          },
-          onPageFinished: (_) {
-            if (mounted) setState(() => _isLoading = false);
-          },
-          onWebResourceError: (_) {
-            if (mounted) setState(() => _isLoading = false);
-          },
-        ),
-      );
-
-    if (controller.platform is AndroidWebViewController) {
-      AndroidWebViewController.enableDebugging(kDebugMode);
-      (controller.platform as AndroidWebViewController)
-          .setMediaPlaybackRequiresUserGesture(false);
-    }
-
-    controller.loadRequest(Uri.parse(widget.articleUrl));
-    _controller = controller;
+  String _getRandomStatusMessage() {
+    const messages = AppStrings.podcastStatusMessages;
+    return messages[Random().nextInt(messages.length)];
   }
 
-  Future<void> _openInBrowser() async {
-    final uri = Uri.parse(widget.articleUrl);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+  void _updateStatus(String status) {
+    if (mounted && _isDownloading) {
+      setState(() {
+        _downloadStatus = status;
+      });
+    }
+  }
+
+  void _scrollListener() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 300) {
+      if (!isLoadingMore && hasMore && !isLoading) {
+        _loadMorePodcasts();
+      }
+    }
+  }
+
+  Future<void> _loadMorePodcasts() async {
+    if (isLoadingMore || !hasMore) return;
+    if (!mounted) return;
+    setState(() {
+      isLoadingMore = true;
+    });
+
+    try {
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (!mounted) return;
+      final podcastRepo =
+          Provider.of<PodcastRepository>(context, listen: false);
+      final allEpisodes = podcastRepo.getSortedEpisodes();
+      final startIndex = podcasts.length;
+      final endIndex = startIndex + pageSize;
+      if (startIndex < allEpisodes.length) {
+        final morePodcasts = allEpisodes.sublist(
+          startIndex,
+          endIndex < allEpisodes.length ? endIndex : allEpisodes.length,
+        );
+        if (mounted) {
+          setState(() {
+            podcasts.addAll(morePodcasts);
+            hasMore = endIndex < allEpisodes.length;
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            hasMore = false;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Load more error: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoadingMore = false;
+        });
+      }
     }
   }
 
   @override
+  void dispose() {
+    _connectivitySubscription.cancel();
+    _scrollController.dispose();
+    _statusUpdateTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // ==================== ВЕБ-ВЕРСИЯ ====================
-    if (kIsWeb) {
-      return Scaffold(
-        body: SafeArea(
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final audioService =
+          Provider.of<AudioPlayerService>(context, listen: false);
+      final podcastRepo =
+          Provider.of<PodcastRepository>(context, listen: false);
+      audioService.setPodcastRepository(podcastRepo);
+    });
+
+    return Scaffold(
+      body: _buildBody(),
+    );
+  }
+
+  Widget _buildBody() {
+    // Пока идёт загрузка и показать нечего — только спиннер.
+    // Раньше здесь требовался текст статуса, которого первые ~2 с нет,
+    // поэтому на мгновение появлялось «Нет доступных подкастов».
+    if (podcasts.isEmpty && (isLoading || _isDownloading)) {
+      return _buildLoadingScreen();
+    }
+    if (errorMessage.isNotEmpty) {
+      return _buildErrorScreen();
+    }
+    if (podcasts.isEmpty) {
+      return _buildEmptyScreen();
+    }
+    return _buildPodcastList();
+  }
+
+  Widget _buildLoadingScreen() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const CircularProgressIndicator(),
+        const SizedBox(height: AppSpacing.smallPlus),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.large),
           child: Column(
             children: [
-              CustomAppBar(
-                leadingIcon: Icons.arrow_back,
-                onLeadingTap: () => Navigator.pop(context),
-              ),
-              const Expanded(
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.open_in_browser,
-                        size: AppIconSizes.emptyState,
-                        color: AppColors.customWhite,
-                      ),
-                      SizedBox(height: AppSpacing.medium),
-                      Text(
-                        AppStrings.articleOpeningInBrowser,
-                        style: AppTextStyles.large,
-                        textAlign: TextAlign.center,
-                      ),
-                      SizedBox(height: AppSpacing.small),
-                      CircularProgressIndicator(),
-                    ],
-                  ),
+              if (_downloadStatus.isNotEmpty) ...[
+                Text(
+                  _downloadStatus,
+                  style: AppTextStyles.medium,
+                  textAlign: TextAlign.center,
                 ),
-              ),
+                const SizedBox(height: AppSpacing.xsmall),
+              ],
+              if (_connectionType == ConnectionType.mobile)
+                Text(
+                  AppStrings.podcastSlowMode,
+                  style: AppTextStyles.podcastMeta,
+                  textAlign: TextAlign.center,
+                ),
             ],
           ),
         ),
-      );
-    }
+      ],
+    );
+  }
 
-    // ==================== МОБИЛЬНАЯ ВЕРСИЯ ====================
-    return Scaffold(
-      body: SafeArea(
+  Widget _buildErrorScreen() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.small),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CustomAppBar(
-              leadingIcon: Icons.arrow_back,
-              onLeadingTap: () => Navigator.pop(context),
+            Icon(
+              _connectionType == ConnectionType.offline
+                  ? Icons.wifi_off
+                  : Icons.error_outline,
+              size: AppIconSizes.xxlarge,
+              color: AppColors.customWhite,
             ),
-            if (_isLoading && _loadingProgress < 1.0)
-              LinearProgressIndicator(
-                value: _loadingProgress,
-                backgroundColor: AppColors.customBackgr,
-              ),
-            Expanded(child: WebViewWidget(controller: _controller!)),
+            const SizedBox(height: AppSpacing.small),
+            Text(
+              errorMessage,
+              style: AppTextStyles.medium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.medium),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton(
+                  onPressed: _refreshPodcasts,
+                  child: const Text(AppStrings.retry),
+                ),
+                const SizedBox(width: AppSpacing.small),
+                if (_connectionType != ConnectionType.offline &&
+                    podcasts.isNotEmpty)
+                  OutlinedButton(
+                    onPressed: () {
+                      setState(() {
+                        errorMessage = '';
+                      });
+                    },
+                    child: const Text(AppStrings.continueLabel),
+                  ),
+              ],
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyScreen() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.podcasts,
+            size: AppIconSizes.xxlarge,
+            color: AppColors.customGrey,
+          ),
+          const SizedBox(height: AppSpacing.small),
+          const Text(AppStrings.podcastsEmpty, style: AppTextStyles.large),
+          const SizedBox(height: AppSpacing.xsmall),
+          Text(
+            _connectionType == ConnectionType.offline
+                ? AppStrings.podcastsConnectHint
+                : AppStrings.podcastsCheckConnection,
+            style: AppTextStyles.mediumMuted,
+          ),
+          const SizedBox(height: AppSpacing.medium),
+          ElevatedButton(
+            onPressed: _refreshPodcasts,
+            child: const Text(AppStrings.podcastsLoad),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPodcastList() {
+    return RefreshIndicator(
+      onRefresh: _refreshPodcasts,
+      child: ListView.builder(
+        controller: _scrollController,
+        padding: const EdgeInsets.all(AppSpacing.xsmall),
+        itemCount: podcasts.length + (hasMore ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == podcasts.length && hasMore) {
+            return _buildLoadMoreIndicator();
+          }
+          return PodcastItem(
+            key: ValueKey(podcasts[index].id),
+            podcast: podcasts[index],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildLoadMoreIndicator() {
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.small),
+      child: Center(
+        child: isLoadingMore
+            ? Column(
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: AppSpacing.xsmall),
+                  Text(
+                    _connectionType == ConnectionType.mobile
+                        ? AppStrings.loadingSlow
+                        : AppStrings.loading,
+                    style: AppTextStyles.podcastMeta,
+                  ),
+                ],
+              )
+            : ElevatedButton(
+                onPressed: _loadMorePodcasts,
+                child: const Text(AppStrings.loadMore),
+              ),
       ),
     );
   }

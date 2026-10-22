@@ -214,11 +214,16 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
     notifyListeners();
   }
 
+  /// null — состояние сети ещё неизвестно (первая проверка не завершена).
+  /// Раньше по умолчанию стояло `none`, и при старте приложения на долю
+  /// секунды показывался красный крест «нет сети».
   bool? get hasNetworkConnection {
-    return _connectivityResult != ConnectivityResult.none;
+    final result = _connectivityResult;
+    if (result == null) return null;
+    return result != ConnectivityResult.none;
   }
 
-  ConnectivityResult _connectivityResult = ConnectivityResult.none;
+  ConnectivityResult? _connectivityResult;
 
   void _handleNetworkChange(ConnectivityResult result) {
     _connectivityResult = result;

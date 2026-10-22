@@ -9,7 +9,6 @@ import 'package:jrrplayerapp/models/podcast.dart';
 import 'package:jrrplayerapp/services/audio_player_service.dart';
 import 'package:jrrplayerapp/repositories/podcast_repository.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:just_audio/just_audio.dart';
 
 class PodcastItem extends StatefulWidget {
   final PodcastEpisode podcast;
@@ -21,7 +20,9 @@ class PodcastItem extends StatefulWidget {
 }
 
 class _PodcastItemState extends State<PodcastItem> {
-  bool _isLoading = false;
+  /// Нажали Play, но плеер ещё не начал играть (загрузка/буферизация).
+  /// В это время уже показываем «паузу», а не спиннер.
+  bool _pendingPlay = false;
   bool _isSeeking = false;
   double _sliderValue = 0.0;
   Duration _currentPosition = Duration.zero;
@@ -72,6 +73,19 @@ class _PodcastItemState extends State<PodcastItem> {
 
   void _onAudioServiceUpdate() {
     if (!mounted) return;
+
+    // Сбрасываем «ожидание запуска», когда эпизод реально заиграл
+    // или когда включили другой эпизод / радио.
+    if (_pendingPlay) {
+      final current = _audioService.currentEpisode;
+      final bool startedHere = current?.id == widget.podcast.id &&
+          _audioService.playerState?.playing == true;
+      final bool switchedAway = !_audioService.isPodcastMode ||
+          (current != null && current.id != widget.podcast.id);
+      if (startedHere || switchedAway) {
+        setState(() => _pendingPlay = false);
+      }
+    }
     if (_audioService.currentEpisode?.id == widget.podcast.id) {
       final currentDuration = _audioService.currentEpisode?.duration;
       if (currentDuration != null && currentDuration > Duration.zero) {
@@ -128,32 +142,28 @@ class _PodcastItemState extends State<PodcastItem> {
 
   // ==================== PLAYBACK ====================
   Future<void> _togglePlayPause(AudioPlayerService audioService) async {
-    setState(() {
-      _isLoading = true;
-    });
+    final bool showsPause = _isPodcastPlaying(audioService) || _pendingPlay;
 
-    try {
-      final isCurrentPodcastPlaying = _isPodcastPlaying(audioService);
-
-      if (isCurrentPodcastPlaying) {
-        await audioService.pause();
-      } else {
-        await audioService.playPodcastFromPosition(
-          widget.podcast,
-          _currentPosition,
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        _showErrorSnackBar('${AppStrings.playbackError}: $e');
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+    if (showsPause) {
+      setState(() => _pendingPlay = false);
+      await audioService.pause();
+      return;
     }
+
+    // Сразу показываем «паузу». Не ждём завершения play(): в just_audio
+    // этот Future завершается только когда воспроизведение ОСТАНОВЛЕНО,
+    // поэтому раньше спиннер висел всё время, пока играл подкаст.
+    setState(() => _pendingPlay = true);
+    unawaited(
+      audioService
+          .playPodcastFromPosition(widget.podcast, _currentPosition)
+          .catchError((Object e) {
+        if (mounted) {
+          setState(() => _pendingPlay = false);
+          _showErrorSnackBar('${AppStrings.playbackError}: $e');
+        }
+      }),
+    );
   }
 
   void _showErrorSnackBar(String message) {
@@ -266,14 +276,6 @@ class _PodcastItemState extends State<PodcastItem> {
         audioService.playerState?.playing == true;
   }
 
-  bool _isPodcastBuffering(AudioPlayerService audioService) {
-    return audioService.currentEpisode?.id == widget.podcast.id &&
-        audioService.isPodcastMode &&
-        (audioService.playerState?.processingState == ProcessingState.buffering ||
-            audioService.playerState?.processingState == ProcessingState.loading ||
-            audioService.isBuffering);
-  }
-
   // ==================== BUILD ====================
   @override
   Widget build(BuildContext context) {
@@ -285,7 +287,6 @@ class _PodcastItemState extends State<PodcastItem> {
     }
 
     final bool isPlaying = _isPodcastPlaying(audioService);
-    final bool isBuffering = _isPodcastBuffering(audioService);
     final Duration? actualDuration = _getActualDuration();
 
     // Attach position stream when this episode is playing
@@ -411,7 +412,6 @@ class _PodcastItemState extends State<PodcastItem> {
             // ===== PLAY / PAUSE CIRCLE =====
             _buildPlayButton(
               isPlaying: isPlaying,
-              isBuffering: isBuffering,
               onTap: () => _togglePlayPause(audioService),
             ),
           ],
@@ -422,7 +422,6 @@ class _PodcastItemState extends State<PodcastItem> {
 
   Widget _buildPlayButton({
     required bool isPlaying,
-    required bool isBuffering,
     required VoidCallback onTap,
   }) {
     const double size = AppDimens.podcastPlayButton;
@@ -440,23 +439,17 @@ class _PodcastItemState extends State<PodcastItem> {
         ),
         child: InkWell(
           customBorder: const CircleBorder(),
-          onTap: (_isLoading || isBuffering) ? null : onTap,
+          // Кнопка всегда активна: во время буферизации ею можно поставить паузу
+          onTap: onTap,
           child: Center(
-            child: (_isLoading || isBuffering)
-                ? const SizedBox(
-                    width: AppDimens.smallSpinner,
-                    height: AppDimens.smallSpinner,
-                    child: CircularProgressIndicator(
-                      strokeWidth: AppDimens.progressStroke,
-                    ),
-                  )
-                : Icon(
-                    isPlaying
-                        ? Icons.pause_rounded
-                        : Icons.play_arrow_rounded,
-                    color: AppColors.customStyle,
-                    size: AppIconSizes.mediumLarge,
-                  ),
+            child: Icon(
+              // Пауза — если играет ИЛИ запуск уже нажат (буферизация)
+              (isPlaying || _pendingPlay)
+                  ? Icons.pause_rounded
+                  : Icons.play_arrow_rounded,
+              color: AppColors.customStyle,
+              size: AppIconSizes.mediumLarge,
+            ),
           ),
         ),
       ),
