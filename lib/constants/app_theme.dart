@@ -1,5 +1,6 @@
 // lib/constants/app_theme.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
 import 'package:jrrplayerapp/constants/app_sizes.dart';
 import 'package:jrrplayerapp/constants/app_text_styles.dart';
@@ -17,6 +18,20 @@ class AppTheme {
   /// fontFamily из ThemeData — добавляем его явно.
   static TextStyle _font(TextStyle style) =>
       style.copyWith(fontFamily: fontFamily);
+
+  /// Системные панели: прозрачный статус-бар, тёмная навигационная
+  /// панель Android того же цвета, что и нижняя навигация приложения.
+  /// contrastEnforced: false — иначе Android рисует поверх серо-белую
+  /// «подложку» под кнопками навигации.
+  static const SystemUiOverlayStyle systemOverlay = SystemUiOverlayStyle(
+    statusBarColor: AppColors.customTransp,
+    statusBarIconBrightness: Brightness.light, // Android
+    statusBarBrightness: Brightness.dark, // iOS
+    systemNavigationBarColor: AppColors.appBarBackground,
+    systemNavigationBarDividerColor: AppColors.appBarBackground,
+    systemNavigationBarIconBrightness: Brightness.light,
+    systemNavigationBarContrastEnforced: false,
+  );
 
   static final ThemeData dark = _buildDark();
 
@@ -46,6 +61,7 @@ class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 0,
         surfaceTintColor: AppColors.customTransp,
+        systemOverlayStyle: systemOverlay,
         titleTextStyle: _font(AppTextStyles.appBarTitle),
       ),
 

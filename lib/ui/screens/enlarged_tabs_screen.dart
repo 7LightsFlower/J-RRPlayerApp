@@ -53,6 +53,10 @@ class _EnlargedTabsScreenState extends State<EnlargedTabsScreen>
     return Scaffold(
       backgroundColor: AppColors.customBackgr,
       body: SafeArea(
+        // В портрете нижний отступ делает сама AppBottomNav —
+        // её фон уходит под системную панель Android (без серой полосы)
+        bottom: MediaQuery.sizeOf(context).width >
+            MediaQuery.sizeOf(context).height,
         child: Column(
           children: [
             CustomAppBar(

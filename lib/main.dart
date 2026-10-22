@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:jrrplayerapp/constants/app_strings.dart';
 import 'package:jrrplayerapp/constants/app_theme.dart';
 import 'package:provider/provider.dart';
@@ -9,6 +10,11 @@ import 'ui/screens/podcast_list_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Приложение рисуется под системными панелями (как на Android 15+),
+  // панели — тёмные, без серой полосы снизу
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  SystemChrome.setSystemUIOverlayStyle(AppTheme.systemOverlay);
 
   runApp(
     MultiProvider(
@@ -34,6 +40,11 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: AppStrings.radioName,
       theme: AppTheme.dark,
+      // Держим стиль системных панелей на всех экранах
+      builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
+        value: AppTheme.systemOverlay,
+        child: child ?? const SizedBox.shrink(),
+      ),
       home: const MainScreen(),
       debugShowCheckedModeBanner: false,
       routes: {

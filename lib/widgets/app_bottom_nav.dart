@@ -40,9 +40,13 @@ class AppBottomNav extends StatelessWidget {
         (width * 0.03).clamp(AppSpacing.xsmall, AppSpacing.smallMid);
 
     return Container(
-      padding: EdgeInsets.symmetric(
-        vertical: verticalPadding,
-        horizontal: AppSpacing.xsmall,
+      // Снизу добавляем высоту системной панели: фон навигации
+      // продолжается под кнопками Android, без серой/белой полосы
+      padding: EdgeInsets.only(
+        left: AppSpacing.xsmall,
+        right: AppSpacing.xsmall,
+        top: verticalPadding,
+        bottom: verticalPadding + MediaQuery.paddingOf(context).bottom,
       ),
       decoration: const BoxDecoration(
         color: AppColors.appBarBackground,

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
 import 'package:jrrplayerapp/constants/app_sizes.dart';
 import 'package:jrrplayerapp/constants/app_strings.dart';
@@ -39,12 +38,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     );
 
     _initializeAsync();
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarColor: AppColors.customTransp,
-      statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: AppColors.customTransp,
-      systemNavigationBarIconBrightness: Brightness.light,
-    ));
   }
 
   @override
@@ -84,6 +77,10 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       key: _scaffoldKey,
       drawer: _buildAppDrawer(),
       body: SafeArea(
+        // В портрете нижний отступ делает сама AppBottomNav —
+        // её фон уходит под системную панель Android (без серой полосы)
+        bottom: MediaQuery.sizeOf(context).width >
+            MediaQuery.sizeOf(context).height,
         child: LayoutBuilder(
           builder: (context, constraints) {
             final Size screen = MediaQuery.of(context).size;
@@ -162,7 +159,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                 // всё ещё хватает, чтобы кольцо не касалось свечения Play.
                 padding: const EdgeInsets.only(
                   top: AppSpacing.xxsmall,
-																				   
                   bottom: AppSpacing.small,
                 ),
                 child: Center(
@@ -182,6 +178,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       },
     );
   }
+
   // ==================== LANDSCAPE LAYOUT ====================
   Widget _buildLandscapeLayout() {
     return LayoutBuilder(
