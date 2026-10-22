@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
 import 'package:jrrplayerapp/constants/app_sizes.dart';
 import 'package:jrrplayerapp/constants/app_strings.dart';
@@ -99,9 +100,11 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                               _scaffoldKey.currentState?.openDrawer(),
                         ),
                         Expanded(
-                          child: OrientationBuilder(
-                            builder: (context, orientation) =>
-                                _buildLandscapeLayout(),
+                          child: _withWebsiteLink(
+                            OrientationBuilder(
+                              builder: (context, orientation) =>
+                                  _buildLandscapeLayout(),
+                            ),
                           ),
                         ),
                       ],
@@ -123,8 +126,11 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                   onLeadingTap: () => _scaffoldKey.currentState?.openDrawer(),
                 ),
                 Expanded(
-                  child: OrientationBuilder(
-                    builder: (context, orientation) => _buildPortraitLayout(),
+                  child: _withWebsiteLink(
+                    OrientationBuilder(
+                      builder: (context, orientation) =>
+                          _buildPortraitLayout(),
+                    ),
                   ),
                 ),
                 AppBottomNav(
@@ -136,6 +142,25 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           },
         ),
       ),
+    );
+  }
+
+  // ==================== ССЫЛКА НА САЙТ ====================
+
+  /// Кладёт ссылку на сайт поверх контента в левом верхнем углу,
+  /// прямо под кнопкой меню. Места по высоте не занимает,
+  /// поэтому размер логотипа не меняется.
+  Widget _withWebsiteLink(Widget content) {
+    return Stack(
+      children: [
+        Positioned.fill(child: content),
+        const Positioned(
+          top: 0,
+          // Выравнивание по кнопке меню в CustomAppBar (отступ 20)
+          left: AppSpacing.smallPlus,
+          child: _WebsiteLink(),
+        ),
+      ],
     );
   }
 
@@ -275,6 +300,47 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
             },
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ==================== WEBSITE LINK ====================
+/// Иконка «веб» + адрес сайта радио. По нажатию открывает сайт в браузере.
+class _WebsiteLink extends StatelessWidget {
+  const _WebsiteLink();
+
+  static final Uri _url = Uri.parse(AppStrings.wwweblinkUrl);
+
+  Future<void> _open() async {
+    await launchUrl(_url, mode: LaunchMode.externalApplication);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.customTransp,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.xsmall),
+        onTap: _open,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xxsmall,
+            vertical: AppSpacing.xxsmall,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.language,
+                color: AppColors.customStyle,
+                size: AppIconSizes.small,
+              ),
+              const SizedBox(width: AppSpacing.xxsmall),
+              Text(_url.host, style: AppTextStyles.badge), // jrock.ru
+            ],
+          ),
+        ),
       ),
     );
   }

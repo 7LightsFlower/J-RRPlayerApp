@@ -148,13 +148,16 @@ class AppDimens {
 
   // ---- Плеер ----
   static const double playerMaxHeightFactor = 0.6; // доля высоты экрана
-  static const double playerCompactThreshold = 400.0;
+  /// Компактный плеер, если 60% высоты экрана меньше этого значения
+  /// (≈ экраны ниже 700 pt, напр. iPhone 8 / SE) — тогда логотип
+  /// на главном экране остаётся полного размера
+  static const double playerCompactThreshold = 420.0;
   static const double playerPlayButton = 84.0;
-  static const double playerPlayButtonCompact = 68.0;
+  static const double playerPlayButtonCompact = 64.0;
   static const double playerSkipIcon = 38.0;
-  static const double playerSkipIconCompact = 32.0;
+  static const double playerSkipIconCompact = 30.0;
   static const double playerCover = 88.0;
-  static const double playerCoverCompact = 72.0;
+  static const double playerCoverCompact = 64.0;
   static const double playerGlowBlur = 20.0;
   static const double playerGlowSpread = 2.0;
   static const double volumeTrackHeight = 8.0;

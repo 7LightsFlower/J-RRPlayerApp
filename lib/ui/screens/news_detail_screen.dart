@@ -36,7 +36,7 @@ class NewsDetailScreen extends StatelessWidget {
         fontFamily: AppTheme.fontFamily,
         fontSize: FontSize(AppFontSizes.medium),
         fontWeight: FontWeight.w400,
-        lineHeight: LineHeight(1.5),
+        lineHeight: const LineHeight(1.5),
         color: AppColors.customWhite,
       );
 
