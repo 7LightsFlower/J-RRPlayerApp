@@ -413,10 +413,22 @@ class AboutScreen extends StatelessWidget {
               AppStrings.aboutDeveloperName,
             ),
             const SizedBox(height: AppSpacing.smallMinus),
-            _buildInfoRow(
-              Icons.web,
-              AppStrings.aboutWebsite,
-              AppStrings.wwweblinkUrl,
+            _buildLinkRow(
+              svgAsset: AppAssets.webIcon,
+              label: AppStrings.aboutWebsite,
+              url: AppStrings.wwweblinkUrl,
+            ),
+            const SizedBox(height: AppSpacing.smallMinus),
+            _buildLinkRow(
+              svgAsset: AppAssets.telegramIcon,
+              label: AppStrings.aboutTelegram,
+              url: AppStrings.telegramUrl,
+            ),
+            const SizedBox(height: AppSpacing.smallMinus),
+            _buildLinkRow(
+              svgAsset: AppAssets.vkontakteIcon,
+              label: AppStrings.aboutVkontakte,
+              url: AppStrings.vkontakteUrl,
             ),
           ],
         ),
@@ -440,6 +452,50 @@ class AboutScreen extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  /// Строка-ссылка: SVG-иконка, подпись и адрес. По нажатию открывает
+  /// ссылку (Telegram / VK откроются в приложении, если оно установлено).
+  Widget _buildLinkRow({
+    required String svgAsset,
+    required String label,
+    required String url,
+  }) {
+    final String shownUrl = url.replaceFirst(RegExp(r'^https?://'), '');
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppRadius.xsmall),
+      onTap: () =>
+          launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+      child: Row(
+        children: [
+          SvgPicture.asset(
+            svgAsset,
+            width: AppIconSizes.infoRow,
+            height: AppIconSizes.infoRow,
+            colorFilter: const ColorFilter.mode(
+              AppColors.customStyle,
+              BlendMode.srcIn,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.smallMinus),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: AppTextStyles.smallMuted),
+                const SizedBox(height: AppSpacing.xxxsmall),
+                Text(shownUrl, style: AppTextStyles.mediumAccent),
+              ],
+            ),
+          ),
+          const Icon(
+            Icons.open_in_new,
+            color: AppColors.iconSecondary,
+            size: AppIconSizes.small,
+          ),
+        ],
+      ),
     );
   }
 }

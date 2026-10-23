@@ -97,6 +97,8 @@ class AppStrings {
   static const String aboutDeveloper = 'Разработчик';
   static const String aboutDeveloperName = 'Команда';
   static const String aboutWebsite = 'Сайт';
+  static const String aboutTelegram = 'Telegram';
+  static const String aboutVkontakte = 'ВКонтакте';
 
   // ==================== НАСТРОЙКИ ====================
   static const String settingsPlayback = 'Воспроизведение';
@@ -155,8 +157,8 @@ class AppStrings {
 
   // URLs
   static const String livestreamUrl = 'https://nradio.net/jrock';
-//  static const String vkontakteUrl = 'https://vk.com/jrockradio';
-//  static const String telegramUrl = 'https://telegram.me/jrockradio';
+  static const String vkontakteUrl = 'https://vk.com/jrockradio';
+  static const String telegramUrl = 'https://telegram.me/jrockradio';
   static const String wwweblinkUrl = 'https://jrock.ru';
   static const String articlesFeedUrl = 'https://jrock.ru/lenta';
   static const String newsFeedUrl = 'https://telegram.me/s/jrr_news';
@@ -243,6 +245,8 @@ class AppAssets {
 
   /// Иконка «веб» (ссылка на сайт под кнопкой меню), SVG
   static const String webIcon = 'assets/icon/icon_wwweblink.svg';
+  static const String telegramIcon = 'assets/icon/icon_telegram.svg';
+  static const String vkontakteIcon = 'assets/icon/icon_vkontakte.svg';
 
   /// Обложка по умолчанию в плеере
   static const String defaultCover = 'assets/images/default_cover.png';
