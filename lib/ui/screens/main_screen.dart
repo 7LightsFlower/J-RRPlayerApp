@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
 import 'package:jrrplayerapp/constants/app_sizes.dart';
@@ -306,7 +307,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
 }
 
 // ==================== WEBSITE LINK ====================
-/// Иконка «веб» + адрес сайта радио. По нажатию открывает сайт в браузере.
+/// Иконка «веб» без текста. По нажатию открывает сайт радио в браузере.
 class _WebsiteLink extends StatelessWidget {
   const _WebsiteLink();
 
@@ -318,27 +319,33 @@ class _WebsiteLink extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.customTransp,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppRadius.xsmall),
-        onTap: _open,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.xxsmall,
-            vertical: AppSpacing.xxsmall,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.language,
-                color: AppColors.customStyle,
-                size: AppIconSizes.small,
+    // Невидимая подпись — только для экранного диктора
+    return Semantics(
+      label: _url.host,
+      button: true,
+      child: Material(
+        color: AppColors.customTransp,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppRadius.card),
+          onTap: _open,
+          // Та же ширина, что у кнопки меню — иконка ровно под ☰
+          child: SizedBox(
+            width: AppDimens.appBarButton,
+            height: AppDimens.appBarButton,
+            child: Center(
+              child: SvgPicture.asset(
+                AppAssets.webIcon,
+                width: AppIconSizes.medium,
+                height: AppIconSizes.medium,
+                fit: BoxFit.contain,
+                // Красим в фирменный цвет (как иконка wifi справа),
+                // чтобы тёмная SVG была видна на тёмном фоне
+                colorFilter: const ColorFilter.mode(
+                  AppColors.customStyle,
+                  BlendMode.srcIn,
+                ),
               ),
-              const SizedBox(width: AppSpacing.xxsmall),
-              Text(_url.host, style: AppTextStyles.badge), // jrock.ru
-            ],
+            ),
           ),
         ),
       ),

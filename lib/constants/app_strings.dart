@@ -241,6 +241,9 @@ class AppAssets {
   static const String radioButtonIcon =
       'assets/images/icon_jrockradio_custom_style.png';
 
+  /// Иконка «веб» (ссылка на сайт под кнопкой меню), SVG
+  static const String webIcon = 'assets/icon/icon_wwweblink.svg';
+
   /// Обложка по умолчанию в плеере
   static const String defaultCover = 'assets/images/default_cover.png';
 
