@@ -101,11 +101,9 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                               _scaffoldKey.currentState?.openDrawer(),
                         ),
                         Expanded(
-                          child: _withWebsiteLink(
-                            OrientationBuilder(
-                              builder: (context, orientation) =>
-                                  _buildLandscapeLayout(),
-                            ),
+                          child: OrientationBuilder(
+                            builder: (context, orientation) =>
+                                _buildLandscapeLayout(),
                           ),
                         ),
                       ],
@@ -127,11 +125,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                   onLeadingTap: () => _scaffoldKey.currentState?.openDrawer(),
                 ),
                 Expanded(
-                  child: _withWebsiteLink(
-                    OrientationBuilder(
-                      builder: (context, orientation) =>
-                          _buildPortraitLayout(),
-                    ),
+                  child: OrientationBuilder(
+                    builder: (context, orientation) => _buildPortraitLayout(),
                   ),
                 ),
                 AppBottomNav(
@@ -143,25 +138,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           },
         ),
       ),
-    );
-  }
-
-  // ==================== ССЫЛКА НА САЙТ ====================
-
-  /// Кладёт ссылку на сайт поверх контента в левом верхнем углу,
-  /// прямо под кнопкой меню. Места по высоте не занимает,
-  /// поэтому размер логотипа не меняется.
-  Widget _withWebsiteLink(Widget content) {
-    return Stack(
-      children: [
-        Positioned.fill(child: content),
-        const Positioned(
-          top: 0,
-          // Выравнивание по кнопке меню в CustomAppBar (отступ 20)
-          left: AppSpacing.smallPlus,
-          child: _WebsiteLink(),
-        ),
-      ],
     );
   }
 
@@ -300,57 +276,31 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
               );
             },
           ),
+          ListTile(
+            leading: SvgPicture.asset(
+              AppAssets.webIcon,
+              width: AppIconSizes.medium,
+              height: AppIconSizes.medium,
+              // Тот же цвет, что у остальных иконок меню
+              colorFilter: const ColorFilter.mode(
+                AppColors.iconSecondary,
+                BlendMode.srcIn,
+              ),
+            ),
+            title:
+                const Text(AppStrings.aboutWebsite, style: AppTextStyles.medium),
+            subtitle: Text(_websiteUrl.host, style: AppTextStyles.smallMuted),
+            onTap: () {
+              Navigator.pop(context);
+              launchUrl(_websiteUrl, mode: LaunchMode.externalApplication);
+            },
+          ),
         ],
       ),
     );
   }
-}
 
-// ==================== WEBSITE LINK ====================
-/// Иконка «веб» без текста. По нажатию открывает сайт радио в браузере.
-class _WebsiteLink extends StatelessWidget {
-  const _WebsiteLink();
-
-  static final Uri _url = Uri.parse(AppStrings.wwweblinkUrl);
-
-  Future<void> _open() async {
-    await launchUrl(_url, mode: LaunchMode.externalApplication);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // Невидимая подпись — только для экранного диктора
-    return Semantics(
-      label: _url.host,
-      button: true,
-      child: Material(
-        color: AppColors.customTransp,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(AppRadius.card),
-          onTap: _open,
-          // Та же ширина, что у кнопки меню — иконка ровно под ☰
-          child: SizedBox(
-            width: AppDimens.appBarButton,
-            height: AppDimens.appBarButton,
-            child: Center(
-              child: SvgPicture.asset(
-                AppAssets.webIcon,
-                width: AppIconSizes.medium,
-                height: AppIconSizes.medium,
-                fit: BoxFit.contain,
-                // Красим в фирменный цвет (как иконка wifi справа),
-                // чтобы тёмная SVG была видна на тёмном фоне
-                colorFilter: const ColorFilter.mode(
-                  AppColors.customStyle,
-                  BlendMode.srcIn,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  static final Uri _websiteUrl = Uri.parse(AppStrings.wwweblinkUrl);
 }
 
 // ==================== EQUALIZER PAINTER ====================
