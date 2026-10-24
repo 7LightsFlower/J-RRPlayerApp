@@ -612,8 +612,10 @@ class AudioPlayerHandler extends BaseAudioHandler {
       await audioPlayerService.initialize();
     }
     if (audioPlayerService.isPodcastMode) {
-      final player = audioPlayerService.getPlayer();
-      if (player != null && !player.playing) await player.play();
+      // Продолжить с того же места; если плеер был сброшен — перезагрузить
+      if (!audioPlayerService.isPlaying) {
+        await audioPlayerService.resumeOrPlayPodcast();
+      }
     } else {
       await audioPlayerService.playRadio();
     }

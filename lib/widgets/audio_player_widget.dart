@@ -195,7 +195,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
         unawaited(_audioService.pause());
       } else {
         if (_audioService.isPodcastMode && _audioService.currentEpisode != null) {
-          unawaited(_audioService.playPodcast(_audioService.currentEpisode!));
+          unawaited(_audioService.resumeOrPlayPodcast());
         } else {
           if (_audioService.isRadioPaused) {
             unawaited(_audioService.resumeRadioFromPause());

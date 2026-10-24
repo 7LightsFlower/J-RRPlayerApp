@@ -961,6 +961,42 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
 
   bool _isRadioStopped = false;
 
+  /// Запуск воспроизведения БЕЗ ожидания.
+  /// В just_audio Future от play() завершается только когда звук
+  /// поставлен на паузу/остановлен. Раньше код «после запуска» ждал его и
+  /// выполнялся уже ПОСЛЕ паузы: снова сообщал «играет» и подставлял в
+  /// уведомление старый эпизод — плеер «путался».
+  void _startPlayback(AudioPlayer player) {
+    player.play().catchError((Object e) {
+      debugPrint('play() error: $e');
+    });
+  }
+
+  /// Источник текущего эпизода ещё загружен (можно просто продолжить)
+  bool get _hasLoadedSource {
+    final state = _player?.processingState;
+    return state == ProcessingState.ready ||
+        state == ProcessingState.buffering ||
+        state == ProcessingState.loading;
+  }
+
+  /// Продолжить текущий подкаст после паузы. Если источник уже загружен —
+  /// просто play() с того же места (быстро). Если плеер был сброшен
+  /// (например, iOS прервал звук, пока телефон был заблокирован) —
+  /// загружаем эпизод заново с сохранённой позиции.
+  Future<void> resumeOrPlayPodcast() async {
+    final episode = _currentEpisode;
+    if (episode == null) return;
+    if (_player != null && _hasLoadedSource) {
+      _startPlayback(_player!);
+      _updateBackgroundAudioPlaybackState(true);
+      _playbackStateController.add(true);
+      _notifyListeners();
+      return;
+    }
+    await playPodcast(episode);
+  }
+
   bool get isPlaying {
     return _player?.playing == true;
   }
@@ -1054,7 +1090,7 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
         if (isRadioPaused) {
           // Радио на паузе - просто возобновляем
           debugPrint('Radio was paused - resuming');
-          await player.play();
+          _startPlayback(player);
           _isRadioStopped = false;
         } else if (_isRadioStopped || player.processingState == ProcessingState.idle) {
           debugPrint('Radio was stopped or idle - starting fresh');
@@ -1113,7 +1149,7 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
           await player.setAudioSource(audioSource);
           
           debugPrint('Starting playback...');
-          await player.play();
+          _startPlayback(player);
           
           debugPrint('Playback started successfully');
           
@@ -1126,7 +1162,7 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
         } else if (!player.playing) {
           // Если радио на паузе, просто возобновляем
           debugPrint('Radio was paused - resuming playback');
-          await player.play();
+          _startPlayback(player);
           
           // Обновляем флаг остановки
           _isRadioStopped = false;
@@ -1244,7 +1280,7 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
 
       final player = getPlayer();
       if (player != null && !player.playing) {
-        await player.play();
+        _startPlayback(player);
 
         // Обновляем состояние в background audio
         _updateBackgroundAudioPlaybackState(true);
@@ -1358,6 +1394,24 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
     // Сбрасываем последний трек для Web
     _lastWebTrackId = null;
 
+    // Тот же эпизод на паузе и ещё загружен → просто продолжаем
+    if (_isPodcastMode &&
+        _currentEpisode?.id == episode.id &&
+        _player != null &&
+        _hasLoadedSource) {
+      final current = _player!.position;
+      if ((current - position).abs() > const Duration(seconds: 2)) {
+        await _player!.seek(position);
+      }
+      await resumeOrPlayPodcast();
+      return;
+    }
+
+    // Новая операция: если пользователь успел выбрать другой эпизод,
+    // эта загрузка прекращается и ничего не перезаписывает
+    final operationId = DateTime.now().microsecondsSinceEpoch.toString();
+    _currentOperationId = operationId;
+
     // Сохраняем позицию текущего эпизода, если он отличается
     if (_currentEpisode != null && _currentEpisode!.id != episode.id) {
       await _saveCurrentPosition();
@@ -1396,6 +1450,7 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
 
       // Останавливаем текущее воспроизведение
       await _player?.stop();
+      if (_currentOperationId != operationId) return;
 
       // Создаем источник аудио с тегом MediaItem
       final audioSource = AudioSource.uri(
@@ -1405,14 +1460,16 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
 
       // Устанавливаем источник
       await _player?.setAudioSource(audioSource);
+      if (_currentOperationId != operationId) return;
 
       // Перематываем на сохраненную позицию
       if (position > Duration.zero) {
         await _player?.seek(position);
       }
+      if (_currentOperationId != operationId) return;
 
       // Начинаем воспроизведение
-      await _player?.play();
+      if (_player != null) _startPlayback(_player!);
 
       // Обновляем background audio
       if (_audioHandler != null && _audioHandler is AudioPlayerHandler) {
@@ -1426,6 +1483,7 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
       debugPrint('Podcast playback started from position: ${episode.title} at ${position.inSeconds}s');
 
     } catch (e, stackTrace) {
+      if (_currentOperationId != operationId) return;
       debugPrint('Error playing podcast from position: $e');
       debugPrint('Stack trace: $stackTrace');
       _isBuffering = false;
@@ -1447,7 +1505,7 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
     }
 
     // Создаем новую операцию для отмены предыдущей
-    final operationId = DateTime.now().millisecondsSinceEpoch.toString();
+    final operationId = DateTime.now().microsecondsSinceEpoch.toString();
     _currentOperationId = operationId;
     _lastWebTrackId = null;
 
@@ -1504,14 +1562,15 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
 
       // Устанавливаем источник
       await _player?.setAudioSource(audioSource);
-
+      if (_currentOperationId != operationId) return;
 
       if (position > Duration.zero) {
         await _player?.seek(position);
       }
+      if (_currentOperationId != operationId) return;
 
       // Начинаем воспроизведение
-      await _player?.play();
+      if (_player != null) _startPlayback(_player!);
 
       // Обновляем background audio
       if (_audioHandler != null && _audioHandler is AudioPlayerHandler) {
@@ -1733,7 +1792,7 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
         // Проверяем, что радио действительно на паузе
         if (!player.playing && isRadioPaused) {
           debugPrint('🎵 Resuming radio from pause - confirmed paused state');
-          await player.play();
+          _startPlayback(player);
           
           // Запускаем таймер метаданных для Web
           if (kIsWeb) {
