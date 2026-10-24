@@ -438,6 +438,14 @@ class AboutScreen extends StatelessWidget {
               label: AppStrings.aboutVkontakte,
               url: AppStrings.vkontakteUrl,
             ),
+            const SizedBox(height: AppSpacing.medium),
+            const Divider(),
+            const SizedBox(height: AppSpacing.small),
+            _buildLinkRow(
+              icon: Icons.privacy_tip_outlined,
+              label: AppStrings.aboutPrivacy,
+              url: AppStrings.privacyPolicyUrl,
+            ),
           ],
         ),
       ),
@@ -466,7 +474,8 @@ class AboutScreen extends StatelessWidget {
   /// Строка-ссылка: SVG-иконка, подпись и адрес. По нажатию открывает
   /// ссылку (Telegram / VK откроются в приложении, если оно установлено).
   Widget _buildLinkRow({
-    required String svgAsset,
+    String? svgAsset,
+    IconData? icon,
     required String label,
     required String url,
   }) {
@@ -477,15 +486,22 @@ class AboutScreen extends StatelessWidget {
           launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
       child: Row(
         children: [
-          SvgPicture.asset(
-            svgAsset,
-            width: AppIconSizes.infoRow,
-            height: AppIconSizes.infoRow,
-            colorFilter: const ColorFilter.mode(
-              AppColors.customStyle,
-              BlendMode.srcIn,
+          if (svgAsset != null)
+            SvgPicture.asset(
+              svgAsset,
+              width: AppIconSizes.infoRow,
+              height: AppIconSizes.infoRow,
+              colorFilter: const ColorFilter.mode(
+                AppColors.customStyle,
+                BlendMode.srcIn,
+              ),
+            )
+          else
+            Icon(
+              icon ?? Icons.link,
+              color: AppColors.customStyle,
+              size: AppIconSizes.infoRow,
             ),
-          ),
           const SizedBox(width: AppSpacing.smallMinus),
           Expanded(
             child: Column(

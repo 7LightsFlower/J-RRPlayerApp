@@ -99,6 +99,7 @@ class AppStrings {
   static const String aboutWebsite = 'Сайт';
   static const String aboutTelegram = 'Telegram';
   static const String aboutVkontakte = 'ВКонтакте';
+  static const String aboutPrivacy = 'Политика конфиденциальности';
 
   // ==================== НАСТРОЙКИ ====================
   static const String settingsPlayback = 'Воспроизведение';
@@ -159,6 +160,9 @@ class AppStrings {
   static const String livestreamUrl = 'https://nradio.net/jrock';
   static const String vkontakteUrl = 'https://vk.com/jrockradio';
   static const String telegramUrl = 'https://telegram.me/jrockradio';
+
+  /// Страница политики конфиденциальности (обязательна для Google Play)
+  static const String privacyPolicyUrl = 'https://jrock.ru/privacy';
   static const String wwweblinkUrl = 'https://jrock.ru';
   static const String articlesFeedUrl = 'https://jrock.ru/lenta';
   static const String newsFeedUrl = 'https://telegram.me/s/jrr_news';
