@@ -103,6 +103,8 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
         break;
       case AppLifecycleState.resumed:
         setAppInBackground(false);
+        // Пока телефон был заблокирован, поиск обложки мог не успеть
+        _refreshCoverIfMissing();
         break;
       default:
         break;
@@ -672,7 +674,6 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
       }
     }
 
-    final bool isInBackground = await _isAppInBackground();
     final query = Uri.encodeComponent('$artist $cleanTitle');
     final url =
         '${AppStrings.itunesSearchUrl}?term=$query&media=music&entity=song&limit=1';
@@ -682,7 +683,7 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
       final response = await http.get(
         Uri.parse(url),
         headers: {'User-Agent': AppStrings.httpUserAgent},
-      ).timeout(isInBackground ? const Duration(seconds: 3) : const Duration(seconds: 8));
+      ).timeout(const Duration(seconds: 8));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -709,16 +710,37 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
   }
   
   bool _isInBackground = false;
+  bool get isInBackground => _isInBackground;
+  bool _isRefreshingCover = false;
 
-  Future<bool> _isAppInBackground() async {
+  /// После разблокировки: если у текущего трека радио ещё нет настоящей
+  /// обложки (в фоне поиск не успел или сеть была «усыплена»),
+  /// ищем её ещё раз. Раньше обложка оставалась старой до следующей песни.
+  Future<void> _refreshCoverIfMissing() async {
+    if (_isPodcastMode || _isRefreshingCover) return;
+    final meta = _currentMetadata;
+    if (meta == null) return;
+    if (meta.artUrl.startsWith('http')) return; // обложка уже есть
+    // Заставка радио до первого трека — искать нечего
+    if (meta.title == AppStrings.radioName ||
+        meta.title == AppStrings.radioTitle) {
+      return;
+    }
+
+    _isRefreshingCover = true;
     try {
-      // Используем MethodChannel для проверки состояния приложения
-      const platform = MethodChannel(AppStrings.lifecycleChannel);
-      final bool result = await platform.invokeMethod('isInBackground') ?? false;
-      return result;
+      final artUrl = await _fetchCoverFromiTunes(meta.title, meta.artist);
+      // Пока искали, трек мог смениться — тогда не трогаем
+      if (artUrl != null &&
+          artUrl.isNotEmpty &&
+          _currentMetadata?.title == meta.title &&
+          _currentMetadata?.artist == meta.artist) {
+        updateCoverOnly(artUrl);
+      }
     } catch (e) {
-      debugPrint('Error checking app state: $e');
-      return _isInBackground;
+      debugPrint('Cover refresh after resume failed: $e');
+    } finally {
+      _isRefreshingCover = false;
     }
   }
 
