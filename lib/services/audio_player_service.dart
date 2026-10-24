@@ -1122,7 +1122,8 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
           const mediaItem = MediaItem(
             id: AppStrings.radioMediaId,
             title: AppStrings.radioName,
-            artist: AppStrings.radioTitle,
+            // Вторая строка до первой песни (раньше дублировала название)
+            artist: AppStrings.radioAlbum,
             album: AppStrings.radioAlbum,
             artUri: null,
           );
