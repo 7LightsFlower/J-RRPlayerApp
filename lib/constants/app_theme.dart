@@ -33,6 +33,15 @@ class AppTheme {
     systemNavigationBarContrastEnforced: false,
   );
 
+  /// В ландшафте нижней навигации нет (она справа), поэтому системная
+  /// панель Android внизу красится в цвет фона экрана — иначе под плеером
+  /// видна лишняя тёмно-синяя полоса.
+  static final SystemUiOverlayStyle systemOverlayLandscape =
+      systemOverlay.copyWith(
+    systemNavigationBarColor: AppColors.customBackgr,
+    systemNavigationBarDividerColor: AppColors.customBackgr,
+  );
+
   static final ThemeData dark = _buildDark();
 
   static ThemeData _buildDark() {

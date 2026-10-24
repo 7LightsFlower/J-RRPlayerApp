@@ -41,10 +41,16 @@ class MyApp extends StatelessWidget {
       title: AppStrings.radioName,
       theme: AppTheme.dark,
       // Держим стиль системных панелей на всех экранах
-      builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
-        value: AppTheme.systemOverlay,
-        child: child ?? const SizedBox.shrink(),
-      ),
+      builder: (context, child) {
+        final Size size = MediaQuery.sizeOf(context);
+        final bool isLandscape = size.width > size.height;
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          value: isLandscape
+              ? AppTheme.systemOverlayLandscape
+              : AppTheme.systemOverlay,
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       home: const MainScreen(),
       debugShowCheckedModeBanner: false,
       routes: {

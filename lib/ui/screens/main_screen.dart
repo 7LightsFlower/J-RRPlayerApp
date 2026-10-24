@@ -216,11 +216,14 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                 ),
               ),
               const SizedBox(width: AppSpacing.small),
-              // RIGHT: player
+              // RIGHT: player — по центру по вертикали, чтобы снизу
+              // оставался запас и ползунок громкости не прижимался к краю
               const Expanded(
-                child: SingleChildScrollView(
-                  physics: BouncingScrollPhysics(),
-                  child: AudioPlayerWidget(),
+                child: Center(
+                  child: SingleChildScrollView(
+                    physics: BouncingScrollPhysics(),
+                    child: AudioPlayerWidget(),
+                  ),
                 ),
               ),
             ],
