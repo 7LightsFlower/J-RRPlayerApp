@@ -307,10 +307,10 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     final double largeSpacing =
         isCompact ? AppSpacing.smallMid : AppSpacing.smallPlus;
 
-    return ConstrainedBox(
-      constraints: BoxConstraints(maxHeight: maxPlayerHeight),
-      child: SingleChildScrollView(
-        child: Column(
+    // Без внутреннего ограничения высоты и прокрутки: раньше они обрезали
+    // ползунок громкости и свечение кнопки Play (особенно в ландшафте).
+    // Подгонку под экран делает родитель (main_screen).
+    return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             // ==================== PLAYBACK CONTROLS ====================
@@ -328,11 +328,8 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                 if (isPodcast) ...[
                   IconButton(
                     icon: Icon(Icons.skip_previous, size: skipIconSize),
-							
                     onPressed: _playPreviousPodcast,
-													
                     color: AppColors.customWhite,
-											 
                   ),
                   SizedBox(width: mediumSpacing),
                 ],
@@ -385,14 +382,10 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                 ),
                 if (isPodcast) ...[
                   SizedBox(width: mediumSpacing),
-
                   IconButton(
                     icon: Icon(Icons.skip_next, size: skipIconSize),
-							
                     onPressed: _playNextPodcast,
-													
                     color: AppColors.customWhite,
-											 
                   ),
                 ],
               ],
@@ -559,8 +552,6 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
             ),
             SizedBox(height: smallSpacing),
           ],
-        ),
-      ),
     );
   }
 

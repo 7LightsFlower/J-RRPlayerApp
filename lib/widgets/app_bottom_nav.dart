@@ -161,14 +161,18 @@ class AppBottomNav extends StatelessWidget {
               size: AppIconSizes.mediumPlus,
             ),
             const SizedBox(height: AppSpacing.compact),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: isActive
-                  ? AppTextStyles.navActive
-                  : AppTextStyles.navInactive,
+            // Слова не разрываются: одно слово — в одну строку
+            // (при нехватке места чуть уменьшается), два слова — в две строки
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label.replaceFirst(' ', '\n'),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                style: isActive
+                    ? AppTextStyles.navActive
+                    : AppTextStyles.navInactive,
+              ),
             ),
           ],
         ),

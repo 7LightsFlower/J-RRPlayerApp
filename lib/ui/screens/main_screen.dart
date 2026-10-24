@@ -197,32 +197,37 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // LEFT: logo
+              // LEFT: logo — по центру, максимально крупный,
+              // уменьшается только если не помещается по высоте
               SizedBox(
                 width: leftWidth,
                 height: availableHeight,
-                child: SingleChildScrollView(
-                  physics: const ClampingScrollPhysics(),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(minHeight: availableHeight),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        AnimatedRadioButton(screenWidth: leftWidth),
-                      ],
-                    ),
+                child: Center(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: AnimatedRadioButton(screenWidth: leftWidth * 1.35),
                   ),
                 ),
               ),
               const SizedBox(width: AppSpacing.small),
-              // RIGHT: player — по центру по вертикали, чтобы снизу
-              // оставался запас и ползунок громкости не прижимался к краю
-              const Expanded(
-                child: Center(
-                  child: SingleChildScrollView(
-                    physics: BouncingScrollPhysics(),
-                    child: AudioPlayerWidget(),
+              // RIGHT: player — по центру; если не помещается по высоте,
+              // плеер целиком чуть уменьшается (ничего не обрезается)
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, box) => Center(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: SizedBox(
+                        width: box.maxWidth,
+                        child: const Padding(
+                          // запас под свечение кнопки Play
+                          padding: EdgeInsets.symmetric(
+                            vertical: AppSpacing.smallPlus,
+                          ),
+                          child: AudioPlayerWidget(),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
