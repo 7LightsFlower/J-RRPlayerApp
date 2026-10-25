@@ -13,9 +13,14 @@ val keystorePropertiesFile = rootProject.file("key.properties")
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
+
 android {
-    namespace = "ru.jrock.radio"
-    compileSdk = flutter.compileSdkVersion
+    // Должен совпадать с `package` в MainActivity.kt — иначе приложение
+    // падает при запуске (ClassNotFoundException). Пользователи его не видят.
+    namespace = "com.example.jrrplayerapp"
+
+    // Google Play требует Android 16 (API 36)
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -28,13 +33,11 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        // ID приложения в Google Play — менять нельзя
         applicationId = "com.sevenlightsflower.jrockradioplayer"
-        //applicationId = "ru.jrock.radio"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        targetSdk = 36
+        // Берутся из pubspec.yaml (version: 1.0.0+11)
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
@@ -47,7 +50,7 @@ android {
             storePassword = keystoreProperties["storePassword"] as String
         }
     }
-    
+
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("release")
