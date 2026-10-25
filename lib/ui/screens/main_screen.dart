@@ -1,4 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
@@ -40,6 +43,52 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     );
 
     _initializeAsync();
+
+    // Android: один раз при первом запуске спрашиваем разрешения,
+    // нужные для звука при заблокированном экране
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _requestBackgroundPermissions();
+    });
+  }
+
+  static const String _bgAskedKey = 'bg_permissions_asked_v1';
+
+  /// 1) Уведомления (Android 13+) — для кнопок плеера в шторке.
+  /// 2) Отключение оптимизации батареи — иначе на Xiaomi/Samsung/Huawei
+  ///    система может остановить звук после блокировки экрана.
+  Future<void> _requestBackgroundPermissions() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(_bgAskedKey) == true) return;
+    await prefs.setBool(_bgAskedKey, true);
+
+    await Permission.notification.request();
+
+    if (await Permission.ignoreBatteryOptimizations.isGranted) return;
+    if (!mounted) return;
+
+    final bool? allow = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text(AppStrings.bgDialogTitle),
+        content: const Text(AppStrings.bgDialogBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text(AppStrings.bgDialogLater),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text(AppStrings.bgDialogAllow),
+          ),
+        ],
+      ),
+    );
+    if (allow == true) {
+      // Системный диалог Android «Разрешить работу в фоне?»
+      await Permission.ignoreBatteryOptimizations.request();
+    }
   }
 
   @override

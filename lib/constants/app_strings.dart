@@ -124,6 +124,15 @@ class AppStrings {
   static const String settingsResetConfirm = 'Сбросить';
   static const String settingsResetDone = 'Настройки сброшены';
 
+  // ==================== ФОНОВОЕ ВОСПРОИЗВЕДЕНИЕ (Android) ====================
+  static const String bgDialogTitle = 'Радио при заблокированном экране';
+  static const String bgDialogBody =
+      'Чтобы радио и подкасты не замолкали, когда экран заблокирован, '
+      'разрешите приложению работать в фоне без ограничений '
+      'режима энергосбережения.';
+  static const String bgDialogAllow = 'Разрешить';
+  static const String bgDialogLater = 'Позже';
+
   // ==================== APPBAR / СИГНАЛ ====================
   static const String ok = 'OK';
   static const String signalStatusTitle = 'Статус сигнала';
