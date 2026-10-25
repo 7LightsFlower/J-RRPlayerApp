@@ -1,7 +1,6 @@
 import 'package:audio_session/audio_session.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:jrrplayerapp/audio/audio_constants.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
 import 'package:jrrplayerapp/constants/app_strings.dart';
