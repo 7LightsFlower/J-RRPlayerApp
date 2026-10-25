@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -53,6 +53,9 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
 
   static const String _bgAskedKey = 'bg_permissions_asked_v1';
 
+  /// Канал к MainActivity.kt (разрешения Android без доп. пакетов)
+  static const MethodChannel _bgChannel = MethodChannel('jrock/background');
+
   /// 1) Уведомления (Android 13+) — для кнопок плеера в шторке.
   /// 2) Отключение оптимизации батареи — иначе на Xiaomi/Samsung/Huawei
   ///    система может остановить звук после блокировки экрана.
@@ -63,9 +66,19 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     if (prefs.getBool(_bgAskedKey) == true) return;
     await prefs.setBool(_bgAskedKey, true);
 
-    await Permission.notification.request();
-
-    if (await Permission.ignoreBatteryOptimizations.isGranted) return;
+    try {
+      // Ждём, пока пользователь ответит на системный запрос уведомлений
+      await _bgChannel.invokeMethod<bool>('requestNotifications');
+      final bool ignoring = await _bgChannel
+              .invokeMethod<bool>('isIgnoringBatteryOptimizations') ??
+          false;
+      if (ignoring) return;
+    } on PlatformException catch (e) {
+      debugPrint('Background permissions: $e');
+      return;
+    } on MissingPluginException {
+      return; // старая MainActivity без канала
+    }
     if (!mounted) return;
 
     final bool? allow = await showDialog<bool>(
@@ -87,7 +100,11 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     );
     if (allow == true) {
       // Системный диалог Android «Разрешить работу в фоне?»
-      await Permission.ignoreBatteryOptimizations.request();
+      try {
+        await _bgChannel.invokeMethod<bool>('requestIgnoreBatteryOptimizations');
+      } on PlatformException catch (e) {
+        debugPrint('Battery optimization request failed: $e');
+      }
     }
   }
 

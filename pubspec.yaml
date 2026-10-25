@@ -1,7 +1,7 @@
 name: jrrplayerapp
 description: Радио J-Rock iOS App
 publish_to: 'none'
-version: 1.0.0+27
+version: 1.0.0+28
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -43,8 +43,6 @@ dependencies:
   cached_network_image: ^3.3.0
   provider: ^6.1.1
   universal_io: ^2.2.0
-  permission_handler: ^13.0.2
-
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -59,8 +57,9 @@ flutter_launcher_icons:
   ios: true
   remove_alpha_ios: true
   android: "ic_launcher"
-  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_background: "#2F5076"
   adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
+  adaptive_icon_foreground_inset: 0
 
   # Для десктопа (Windows, macOS)
   windows:
