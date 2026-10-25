@@ -1,7 +1,7 @@
 name: jrrplayerapp
 description: Радио J-Rock iOS App
 publish_to: 'none'
-version: 1.0.0+26
+version: 1.0.0+27
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -58,7 +58,7 @@ flutter_launcher_icons:
   ios: true
   remove_alpha_ios: true
   android: "ic_launcher"
-  adaptive_icon_background: "#2F5076"
+  adaptive_icon_background: "#FFFFFF"
   adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
 
   # Для десктопа (Windows, macOS)

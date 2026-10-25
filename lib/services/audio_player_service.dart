@@ -251,11 +251,11 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
       
       _audioHandler = await AudioService.init(
         builder: () => AudioPlayerHandler(this),
-        config: AudioServiceConfig(
+        config: const AudioServiceConfig(
           androidNotificationChannelId: AppStrings.notificationChannelId,
           androidNotificationChannelName: AppStrings.radioName,
           androidNotificationOngoing: true,
-          androidStopForegroundOnPause: false,
+          androidStopForegroundOnPause: true,
           rewindInterval: kPodcastRewindInterval,
           fastForwardInterval: kPodcastFastForwardInterval,
           androidNotificationIcon: AppStrings.notificationIcon,
