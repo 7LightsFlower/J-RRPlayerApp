@@ -335,6 +335,18 @@ class AudioPlayerHandler extends BaseAudioHandler {
   Future<void> forceUpdateCover(String artUrl) async {
     debugPrint('🔄 [Handler] Force update cover: $artUrl');
 
+    // Обложка должна относиться к тому треку, который сейчас в сервисе
+    final current = audioPlayerService.currentMetadata;
+    final target = _pendingMetadata ?? _currentMediaItem;
+    if (current != null && target != null) {
+      final targetTitle = target is AudioMetadata ? target.title : (target as MediaItem).title;
+      final targetArtist = target is AudioMetadata ? target.artist : (target as MediaItem).artist;
+      if (targetTitle != current.title || targetArtist != current.artist) {
+        debugPrint('⏭️ [Handler] Cover is for another track, skipping');
+        return;
+      }
+    }
+
     // Если есть ожидающие метаданные – применяем их с новой обложкой
     if (_pendingMetadata != null) {
       _cancelPendingMetadata();
