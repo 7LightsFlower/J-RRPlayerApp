@@ -39,6 +39,12 @@ class AudioPlayerHandler extends BaseAudioHandler {
   // --- Debounce для состояния воспроизведения ---
   Timer? _playbackStateDebounceTimer;
 
+  /// Страховка: раз в 2 с сверяем состояние для системы с реальным
+  /// состоянием плеера и исправляем расхождение. Даже если какое-то
+  /// событие потеряется, уведомление не «застрянет» в playing=false/idle.
+  Timer? _syncWatchdog;
+  StreamSubscription<PlaybackEvent>? _eventSubscription;
+
   // --- Кэш для artUri (ключ – оригинальный URL без cache-buster) ---
   final Map<String, Uri> _artUriCache = {};
 
@@ -50,6 +56,9 @@ class AudioPlayerHandler extends BaseAudioHandler {
   static const int _defaultCoverVersion = 2;
 
   AudioPlayerHandler(this.audioPlayerService) {
+    _syncWatchdog = Timer.periodic(const Duration(seconds: 2), (_) {
+      _syncWithPlayer();
+    });
     _initDefaultArtUris();
     _updateInitialMediaItem();
     audioPlayerService.addListener(_onAudioServiceUpdate);
@@ -164,8 +173,17 @@ class AudioPlayerHandler extends BaseAudioHandler {
     _durationSubscription?.cancel();
     _playingSubscription?.cancel();
     _processingSubscription?.cancel();
+    _eventSubscription?.cancel();
 
     if (player == null) return;
+
+    // Любое событие плеера (загрузка, буфер, готов, пауза…) сразу
+    // отражаем в состоянии для системы
+    _eventSubscription = player.playbackEventStream.listen(
+      (_) => updatePlaybackState(player.playing),
+      onError: (Object e, StackTrace st) =>
+          debugPrint('❌ playbackEventStream error: $e'),
+    );
 
     // Playing and processing states are always needed
     _playingSubscription = player.playingStream.listen((isPlaying) {
@@ -189,13 +207,42 @@ class AudioPlayerHandler extends BaseAudioHandler {
   }
 
   void _debouncedUpdatePlaybackState(bool isPlaying) {
+    // Состояние для системы — сразу (раньше ждало 300 мс и могло теряться)
+    updatePlaybackState(isPlaying);
+    // С задержкой — только перерисовка UI, чтобы не дёргать её слишком часто
     _playbackStateDebounceTimer?.cancel();
     _playbackStateDebounceTimer = Timer(const Duration(milliseconds: 300), () {
       if (!audioPlayerService.isDisposed) {
-        updatePlaybackState(isPlaying);
         audioPlayerService.notifyListenersSafe();
       }
     });
+  }
+
+  AudioProcessingState _mapProcessingState(ProcessingState state) {
+    return switch (state) {
+      ProcessingState.idle => AudioProcessingState.idle,
+      ProcessingState.loading => AudioProcessingState.loading,
+      ProcessingState.buffering => AudioProcessingState.buffering,
+      ProcessingState.ready => AudioProcessingState.ready,
+      ProcessingState.completed => AudioProcessingState.completed,
+    };
+  }
+
+  /// Сверка с плеером (вызывается страховочным таймером)
+  void _syncWithPlayer() {
+    if (audioPlayerService.isDisposed) return;
+    final player = audioPlayerService.getPlayer();
+    if (player == null) return;
+    _setupStreams(); // если плеер пересоздан — переподписываемся
+    final current = playbackState.value;
+    final expected = _mapProcessingState(player.processingState);
+    if (current.playing != player.playing ||
+        current.processingState != expected) {
+      debugPrint('🔧 Handler out of sync '
+          '(${current.playing}/${current.processingState.name} vs '
+          '${player.playing}/${expected.name}) — fixing');
+      updatePlaybackState(player.playing);
+    }
   }
 
   
@@ -431,8 +478,19 @@ class AudioPlayerHandler extends BaseAudioHandler {
   // ==================== PLAYBACK STATE ====================
 
   void updatePlaybackState(bool isPlaying) {
+    try {
+      _updatePlaybackStateUnsafe(isPlaying);
+    } catch (e, st) {
+      debugPrint('❌ updatePlaybackState failed: $e\n$st');
+    }
+  }
+
+  void _updatePlaybackStateUnsafe(bool requestedPlaying) {
     final player = audioPlayerService.getPlayer();
     final isPodcast = audioPlayerService.isPodcastMode;
+    // Источник истины — сам плеер. Переданное значение используется,
+    // только если плеера ещё нет.
+    final bool isPlaying = player?.playing ?? requestedPlaying;
 
     // Позиция и буферизация (для радио — всегда zero)
     final Duration position = isPodcast && player != null 
@@ -510,17 +568,9 @@ class AudioPlayerHandler extends BaseAudioHandler {
         ? [0, 2, controls.length - 2] 
         : [0];
 
-    // Processing state (исправленный exhaustive switch)
-    AudioProcessingState processingState = AudioProcessingState.idle;
-    if (player != null) {
-      processingState = switch (player.processingState) {
-        ProcessingState.idle => AudioProcessingState.idle,
-        ProcessingState.loading => AudioProcessingState.loading,
-        ProcessingState.buffering => AudioProcessingState.buffering,
-        ProcessingState.ready => AudioProcessingState.ready,
-        ProcessingState.completed => AudioProcessingState.completed,
-      };
-    }
+    final AudioProcessingState processingState = player != null
+        ? _mapProcessingState(player.processingState)
+        : AudioProcessingState.idle;
 
     final newState = PlaybackState(
       controls: controls,
@@ -706,6 +756,8 @@ class AudioPlayerHandler extends BaseAudioHandler {
     _resetCommandLock();
     _commandTimeoutTimer?.cancel();
     _playbackStateDebounceTimer?.cancel();
+    _syncWatchdog?.cancel();
+    _eventSubscription?.cancel();
     _cancelPendingMetadata();
 
     audioPlayerService.removeListener(_onAudioServiceUpdate);

@@ -150,7 +150,10 @@ class AppStrings {
 
   // ==================== ФОНОВОЕ АУДИО / УВЕДОМЛЕНИЕ ====================
   static const String notificationChannelId = 'com.jrrplayerapp.channel.audio';
-  static const String notificationIcon = 'mipmap/ic_launcher';
+  /// Маленькая иконка в строке состояния / уведомлении: только белый силуэт
+  /// на прозрачном фоне (android/app/src/main/res/drawable-*/ic_notification.png).
+  /// Цветная адаптивная иконка приложения (mipmap) для этого не подходит.
+  static const String notificationIcon = 'drawable/ic_notification';
   static const String lifecycleChannel = 'com.jrrplayerapp/app_lifecycle';
   static const String radioMediaId = 'jrr_live_stream';
   static const String podcastArtist = 'Подкаст J-Rock';

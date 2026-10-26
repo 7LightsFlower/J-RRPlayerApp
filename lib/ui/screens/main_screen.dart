@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:provider/provider.dart';
+import 'package:jrrplayerapp/services/audio_player_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
 import 'package:jrrplayerapp/constants/app_sizes.dart';
@@ -463,6 +465,20 @@ class AboutScreen extends StatelessWidget {
             Text(
               '${AppStrings.aboutVersionLabel} ${AppStrings.appVersion}',
               style: AppTextStyles.mediumMuted,
+            ),
+
+            // ВРЕМЕННО: диагностика фонового режима (уведомление / экран
+            // блокировки). Удалить после проверки.
+            const SizedBox(height: AppSpacing.xsmall),
+            Consumer<AudioPlayerService>(
+              builder: (context, svc, _) => SelectableText(
+                svc.isBackgroundAudioReady
+                    ? 'Фоновый сервис: OK\n${svc.backgroundStateInfo}'
+                    : 'Фоновый сервис: НЕ ЗАПУЩЕН\n'
+                        '${svc.backgroundAudioError ?? "init не вызывался"}',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.smallMuted,
+              ),
             ),
             const SizedBox(height: AppSpacing.large),
 

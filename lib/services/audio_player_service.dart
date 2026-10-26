@@ -1,6 +1,7 @@
 import 'package:audio_session/audio_session.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:jrrplayerapp/audio/audio_constants.dart';
 import 'package:jrrplayerapp/constants/app_colors.dart';
 import 'package:jrrplayerapp/constants/app_strings.dart';
@@ -110,8 +111,28 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
     }
   }
   
-  // Добавьте этот геттер
   AudioHandler? get audioHandler => _audioHandler;
+
+  // ---------- Диагностика фонового режима (временно) ----------
+  String? _backgroundAudioError;
+
+  /// Текст ошибки, если AudioService.init не удался
+  String? get backgroundAudioError => _backgroundAudioError;
+
+  /// Фоновый сервис (уведомление, экран блокировки) запущен
+  bool get isBackgroundAudioReady => _audioHandler is AudioPlayerHandler;
+
+  /// Что сейчас передано системе для уведомления
+  String get backgroundStateInfo {
+    final h = _audioHandler;
+    if (h == null) return 'handler = null';
+    final s = h.playbackState.value;
+    final m = h.mediaItem.value;
+    final p = _player;
+    return 'Плеер: playing=${p?.playing}, state=${p?.processingState.name}\n'
+        'Уведомление: playing=${s.playing}, state=${s.processingState.name}\n'
+        'title=${m?.title ?? "—"}';
+  }
 
   AudioPlayer? getPlayer() {
     return _player;
@@ -169,7 +190,7 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
       resetMetadata();
 
       // Останавливаем таймер метаданных для Web
-      if (kIsWeb) {
+      if (_useStatusPolling) {
         _stopWebMetadataPolling();
       }
 
@@ -251,9 +272,13 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
       
       _audioHandler = await AudioService.init(
         builder: () => AudioPlayerHandler(this),
-        config: const AudioServiceConfig(
+        config: AudioServiceConfig(
           androidNotificationChannelId: AppStrings.notificationChannelId,
           androidNotificationChannelName: AppStrings.radioName,
+          // Эти два значения должны быть согласованы: audio_service
+          // запрещает ongoing=true вместе с stopForegroundOnPause=false
+          // (AssertionError). Ошибка молча глоталась ниже → фоновый сервис
+          // не запускался → звук замолкал при блокировке экрана.
           androidNotificationOngoing: true,
           androidStopForegroundOnPause: true,
           rewindInterval: kPodcastRewindInterval,
@@ -264,10 +289,14 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
         ),
       );
       _isBackgroundAudioInitialized = true;
+      _backgroundAudioError = null;
       debugPrint('Background audio initialized successfully');
     } catch (e, stackTrace) {
-      developer.log('Error initializing background audio: $e', 
-        error: e, stackTrace: stackTrace);
+      // Раньше ошибка была видна только в developer.log — теперь и в консоли
+      debugPrint('❌ Background audio NOT initialized: $e');
+      _backgroundAudioError = e.toString();
+      developer.log('Error initializing background audio: $e',
+          error: e, stackTrace: stackTrace);
       _isBackgroundAudioInitialized = true;
     }
   }
@@ -516,12 +545,23 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
     }
   }
 
+  /// Платформы без ICY-метаданных в потоке: Web (браузер их не отдаёт)
+  /// и Windows/Linux (бэкенд media_kit их не поддерживает).
+  /// Там название песни берём из статуса Icecast-сервера.
+  static bool get _useStatusPolling =>
+      kIsWeb ||
+      defaultTargetPlatform == TargetPlatform.windows ||
+      defaultTargetPlatform == TargetPlatform.linux;
+
   void _startWebMetadataPolling() {
-    if (!kIsWeb) return;
+    if (!_useStatusPolling) return;
 
     _stopWebMetadataPolling();
+    _lastWebTrackId = null; // показать текущий трек сразу, а не через 15 с
     debugPrint('Starting web metadata polling...');
 
+    // Первый запрос сразу, дальше — каждые 15 секунд
+    Future.delayed(const Duration(seconds: 2), _fetchWebMetadata);
     _webMetadataTimer = Timer.periodic(_webMetadataPollInterval, (_) {
       _fetchWebMetadata();
     });
@@ -537,7 +577,7 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
   }
 
   Future<void> _fetchWebMetadata() async {
-    if (!kIsWeb || _isPodcastMode || (_player?.playing != true && !_isPodcastMode)) {
+    if (!_useStatusPolling || _isPodcastMode || _player?.playing != true) {
       return;
     }
 
@@ -561,7 +601,13 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
           dynamic actualSource;
 
           if (source is List && source.isNotEmpty) {
-            actualSource = source[0];
+            // На сервере несколько станций — ищем нашу по адресу потока
+            final String mount = Uri.parse(AppStrings.livestreamUrl).path;
+            actualSource = source.firstWhere(
+              (s) => s is Map &&
+                  (s['listenurl']?.toString() ?? '').endsWith(mount),
+              orElse: () => source[0],
+            );
           } else if (source is Map) {
             actualSource = source;
           }
@@ -937,7 +983,7 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
     await _saveCurrentPosition();
 
     // Останавливаем таймер метаданных для Web
-    if (kIsWeb) {
+    if (_useStatusPolling) {
       _stopWebMetadataPolling();
     }
 
@@ -1036,7 +1082,7 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
       }
       
       // Останавливаем таймер метаданных для Web
-      if (kIsWeb) {
+      if (_useStatusPolling) {
         _stopWebMetadataPolling();
       }
       
@@ -1098,7 +1144,7 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
           _isRadioStopped = false;
           
           // Останавливаем таймер метаданных для Web
-          if (kIsWeb) {
+          if (_useStatusPolling) {
             _stopWebMetadataPolling();
           }
           
@@ -1154,7 +1200,7 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
           debugPrint('Playback started successfully');
           
           // Запускаем таймер метаданных для Web
-          if (kIsWeb) {
+          if (_useStatusPolling) {
             _startWebMetadataPolling();
           }
           
@@ -1168,7 +1214,7 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
           _isRadioStopped = false;
           
           // Запускаем таймер метаданных для Web
-          if (kIsWeb) {
+          if (_useStatusPolling) {
             _startWebMetadataPolling();
           }
           
@@ -1252,7 +1298,7 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
           _isRadioStopped = false; // Важно: не останавливаем полностью!
           
           // Останавливаем таймер метаданных для Web
-          if (kIsWeb) {
+          if (_useStatusPolling) {
             _stopWebMetadataPolling();
           }
           
@@ -1286,7 +1332,7 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
         _updateBackgroundAudioPlaybackState(true);
 
         // Запускаем таймер метаданных для Web
-        if (kIsWeb) {
+        if (_useStatusPolling) {
           _startWebMetadataPolling();
         }
 
@@ -1348,7 +1394,7 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
       await _saveCurrentPosition();
 
       // 2. Останавливаем таймер метаданных (для Web)
-      if (kIsWeb) {
+      if (_useStatusPolling) {
         _stopWebMetadataPolling();
       }
 
@@ -1387,7 +1433,7 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
     }
 
     // Останавливаем таймер метаданных для Web
-    if (kIsWeb) {
+    if (_useStatusPolling) {
       _stopWebMetadataPolling();
     }
 
@@ -1500,7 +1546,7 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
     }
 
     // Останавливаем таймер метаданных для Web
-    if (kIsWeb) {
+    if (_useStatusPolling) {
       _stopWebMetadataPolling();
     }
 
@@ -1746,7 +1792,7 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
             debugPrint('🎵 Radio paused (isRadioStopped set to false)');
             
             // Останавливаем таймер метаданных для Web
-            if (kIsWeb) {
+            if (_useStatusPolling) {
               _stopWebMetadataPolling();
             }
           } else {
@@ -1795,7 +1841,7 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
           _startPlayback(player);
           
           // Запускаем таймер метаданных для Web
-          if (kIsWeb) {
+          if (_useStatusPolling) {
             _startWebMetadataPolling();
           }
           
@@ -1874,7 +1920,7 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
       await _audioHandler?.stop();
 
       // Останавливаем таймер метаданных для Web
-      if (kIsWeb) {
+      if (_useStatusPolling) {
         _stopWebMetadataPolling();
       }
 
@@ -1901,7 +1947,7 @@ class AudioPlayerService with ChangeNotifier, WidgetsBindingObserver {
 
     await _saveCurrentPosition();
 
-    if (kIsWeb) {
+    if (_useStatusPolling) {
       _stopWebMetadataPolling();
     }
 

@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:flutter/services.dart';
 import 'package:jrrplayerapp/constants/app_strings.dart';
 import 'package:jrrplayerapp/constants/app_theme.dart';
@@ -10,6 +12,18 @@ import 'ui/screens/podcast_list_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // just_audio не умеет играть на Windows/Linux сам по себе —
+  // подключаем реализацию на media_kit (на Android/iOS/Web не нужна)
+  if (!kIsWeb) {
+    JustAudioMediaKit.ensureInitialized(
+      windows: true,
+      linux: true,
+      android: false,
+      iOS: false,
+      macOS: false,
+    );
+  }
 
   // Приложение рисуется под системными панелями (как на Android 15+),
   // панели — тёмные, без серой полосы снизу
