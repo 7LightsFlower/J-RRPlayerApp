@@ -64,24 +64,33 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   Future<void> _requestBackgroundPermissions() async {
     if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
 
-    final prefs = await SharedPreferences.getInstance();
-    if (prefs.getBool(_bgAskedKey) == true) return;
-    await prefs.setBool(_bgAskedKey, true);
-
+    // 1) Уведомления — при каждом запуске (если уже разрешено, диалога не будет)
     try {
-      // Ждём, пока пользователь ответит на системный запрос уведомлений
-      await _bgChannel.invokeMethod<bool>('requestNotifications');
-      final bool ignoring = await _bgChannel
-              .invokeMethod<bool>('isIgnoringBatteryOptimizations') ??
-          false;
-      if (ignoring) return;
+      final granted =
+          await _bgChannel.invokeMethod<bool>('requestNotifications') ?? false;
+      debugPrint('🔔 Notifications permission: $granted');
     } on PlatformException catch (e) {
-      debugPrint('Background permissions: $e');
-      return;
+      debugPrint('Notifications permission error: $e');
     } on MissingPluginException {
       return; // старая MainActivity без канала
     }
-    if (!mounted) return;
+
+    // 2) Батарея — свой диалог показываем только один раз
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(_bgAskedKey) == true) return;
+
+    bool ignoring = false;
+    try {
+      ignoring = await _bgChannel
+              .invokeMethod<bool>('isIgnoringBatteryOptimizations') ??
+          false;
+    } on PlatformException catch (e) {
+      debugPrint('Battery check error: $e');
+      return;
+    }
+    // Флаг ставим только когда дошли до реального решения
+    await prefs.setBool(_bgAskedKey, true);
+    if (ignoring || !mounted) return;
 
     final bool? allow = await showDialog<bool>(
       context: context,

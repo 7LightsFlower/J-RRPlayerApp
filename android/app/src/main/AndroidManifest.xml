@@ -34,11 +34,6 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-
-            <!-- Важно: медиа-кнопки -->
-            <intent-filter android:priority="2147483647">
-                <action android:name="android.intent.action.MEDIA_BUTTON" />
-            </intent-filter>
         </activity>
 
         <!-- ЭТОТ СЕРВИС ОБЯЗАТЕЛЬНО НУЖЕН -->

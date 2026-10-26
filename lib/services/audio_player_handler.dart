@@ -246,14 +246,19 @@ class AudioPlayerHandler extends BaseAudioHandler {
   }
 
   
+  bool? _lastIsPodcast;
+
   bool _shouldUpdatePlaybackState(PlaybackState newState) {
     final old = _lastPlaybackState;
-    if (old == null) return true;
-
+    final isPodcast = audioPlayerService.isPodcastMode;
+    if (old == null || _lastIsPodcast != isPodcast) {
+      _lastIsPodcast = isPodcast;
+      return true;
+    }
     return old.playing != newState.playing ||
-           old.processingState != newState.processingState ||
-           old.updatePosition != newState.updatePosition ||
-           old.bufferedPosition != newState.bufferedPosition;
+          old.processingState != newState.processingState ||
+          old.updatePosition != newState.updatePosition ||
+          old.bufferedPosition != newState.bufferedPosition;
   }
 
   void _updatePlaybackPosition(Duration position) {
