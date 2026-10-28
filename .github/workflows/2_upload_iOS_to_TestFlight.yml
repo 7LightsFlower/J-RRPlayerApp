@@ -89,7 +89,7 @@ jobs:
             CODE_SIGN_STYLE=Automatic \
             archive
 
-      - name: Export & upload to App Store Connect
+      - name: Export signed IPA
         run: |
           cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
@@ -99,7 +99,7 @@ jobs:
             <key>method</key>
             <string>app-store-connect</string>
             <key>destination</key>
-            <string>upload</string>
+            <string>export</string>
             <key>teamID</key>
             <string>${APPLE_TEAM_ID}</string>
             <key>signingStyle</key>
@@ -121,7 +121,33 @@ jobs:
             -authenticationKeyID "$ASC_KEY_ID" \
             -authenticationKeyIssuerID "$ASC_ISSUER_ID"
 
+          ls -la "$RUNNER_TEMP/export"
+
+      # IPA сохраняется в Artifacts даже если загрузка ниже упадёт
+      - name: Save IPA as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: JRock-iOS-${{ env.BUILD_NUMBER }}.ipa
+          path: ${{ runner.temp }}/export/*.ipa
+          retention-days: 14
+
+      # altool сам находит ключ в ~/private_keys/AuthKey_<KEY_ID>.p8
+      # и выдаёт понятный текст ошибки, если что-то не так в App Store Connect
+      - name: Upload to TestFlight
+        run: |
+          IPA=$(ls "$RUNNER_TEMP"/export/*.ipa | head -1)
+          xcrun altool --upload-app --type ios --file "$IPA" \
+            --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID" \
+            --output-format normal
           echo "✅ Build $BUILD_NUMBER uploaded. It will appear in TestFlight after processing (5–30 min)."
+
+      - name: Upload Xcode distribution logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcdistributionlogs
+          path: /var/folders/**/*.xcdistributionlogs
+          if-no-files-found: ignore
 
       - name: Remove API key
         if: always()
