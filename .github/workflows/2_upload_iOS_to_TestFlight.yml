@@ -62,7 +62,7 @@ jobs:
         run: echo "BUILD_NUMBER=$((GITHUB_RUN_NUMBER + 100))" >> "$GITHUB_ENV"
 
       - name: Flutter iOS config
-        run: flutter build ios --release --config-only --build-number=$BUILD_NUMBER
+        run: flutter build ios --release --config-only --no-codesign --build-number=$BUILD_NUMBER
 
       - name: Install CocoaPods
         working-directory: ios
