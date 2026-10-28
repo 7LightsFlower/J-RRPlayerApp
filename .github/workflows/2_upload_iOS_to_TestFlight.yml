@@ -141,14 +141,6 @@ jobs:
             --output-format normal
           echo "✅ Build $BUILD_NUMBER uploaded. It will appear in TestFlight after processing (5–30 min)."
 
-      - name: Upload Xcode distribution logs on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: xcdistributionlogs
-          path: /var/folders/**/*.xcdistributionlogs
-          if-no-files-found: ignore
-
       - name: Remove API key
         if: always()
         run: rm -rf "$HOME/private_keys"
